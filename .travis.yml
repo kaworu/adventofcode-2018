@@ -1,2 +1,4 @@
 dist: xenial
 language: haskell
+ghc:
+    - "8.0"
