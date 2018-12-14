@@ -1,0 +1,25 @@
+name:                adventofcode2018
+version:             1.1
+synopsis:            Advent of Code 2018 puzzles and solutions in Haskell
+homepage:            https://github.com/kAworu/adventofcode-2018
+license:             MIT
+license-file:        LICENSE
+author:              Alexandre Perrin
+maintainer:          alex@kaworu.ch
+build-type:          Simple
+extra-source-files:   README.md
+cabal-version:       >=1.10
+
+test-suite doctests
+  type:                exitcode-stdio-1.0
+  ghc-options:         -threaded
+  main-is:             doctest.hs
+  build-depends:       base, doctest
+  default-language:    Haskell2010
+
+executable Day01
+  hs-source-dirs:      "Day 01 - Chronal Calibration"
+  main-is:             Main.hs
+  build-depends:       base   >=4.9 && <4.10,
+                       parsec >=3.1 && <3.2
+  default-language:    Haskell2010
