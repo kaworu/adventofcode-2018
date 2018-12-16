@@ -54,8 +54,9 @@ data TwiceFreq = Empty | Searching (Set Freq) | Found Freq
 -- Found 42
 search :: TwiceFreq -> Freq -> TwiceFreq
 search (Found f) _ = Found f
-search (Searching s) f | f `member` s = Found f
-                       | otherwise = Searching (f `insert` s)
+search (Searching s) f
+  | f `member` s = Found f
+  | otherwise    = Searching (f `insert` s)
 search Empty f = Searching (singleton f)
 
 -- | Given a initial frequency, a complete list of changes, and a rest of list
@@ -63,8 +64,11 @@ search Empty f = Searching (singleton f)
 -- applied and find the first frequency reached twice.
 compute :: FinalFreq -> TwiceFreq -> Freq -> [Drift] -> [Drift] -> (Freq, Freq)
 compute (Measured ff) (Found t2) _ _ _ = (ff, t2)
-compute fin twice f ds [] = compute (fin `measure` f) twice f ds ds
-compute fin twice f ds (x:xs) = compute fin (search twice f) (f `calibrate` x) ds xs
+compute fin twice f ds [] = compute fin' twice f ds ds
+    where fin' = fin `measure` f
+compute fin twice f ds (x:xs) = compute fin twice' f' ds xs
+    where twice' = search twice f
+          f' = f `calibrate` x
 
 -- | Given a initial frequency and a list of changes, measure the resulting
 -- frequency after all the changes have been applied and find the first
@@ -91,8 +95,10 @@ initialFreq = 0
 -- >>> part1 "-1, -2, -3"
 -- Right (-6)
 part1 :: String -> Either ParseError Freq
-part1 input = let part1' = fst . compute' Measuring (Found 0) initialFreq
-           in either Left (Right . part1') (parse drifts "" input)
+part1 input = either Left (Right . part1') parsed
+    where part1' = fst . compute' Measuring (Found 0) initialFreq
+          parsed = parse drifts "" input
+
 
 -- | The first device's frequency reached twice given a string representation
 -- of a sequence of changes to cycle through.
@@ -108,18 +114,23 @@ part1 input = let part1' = fst . compute' Measuring (Found 0) initialFreq
 -- >>> part2 "+7, +7, -2, -7, -4"
 -- Right 14
 part2 :: String -> Either ParseError Freq
-part2 input = let part2' = snd . compute' (Measured 0) Empty initialFreq
-           in either Left (Right . part2') (parse drifts "" input)
+part2 input = either Left (Right . part2') parsed
+    where part2' = snd . compute' (Measured 0) Empty initialFreq
+          parsed = parse drifts "" input
+
+-- | Display the answers given the resulting frequency and the first frequency
+-- reached twice.
+answer :: Freq -> Freq -> IO ()
+answer = printf "The resulting frequency is %d and the first frequency reached twice is %d.\n"
 
 -- | Compute and the calibrated device's frequency.
 main :: IO ()
 main = do
     input <- getContents
     case parse drifts "" input of
-      Left err ->
-          print err >> fail "parse error"
-      Right ds -> let freqs = compute' Measuring Empty initialFreq ds
-                   in printf "The resulting frequency is %d and the first frequency reached twice is %d.\n" (fst freqs) (snd freqs)
+      Left err -> print err >> fail "parse error"
+      Right ds -> answer (fst freqs) (snd freqs)
+          where freqs = compute' Measuring Empty initialFreq ds
 
 -- | Parse an Freq value.
 --
