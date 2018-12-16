@@ -8,7 +8,7 @@ import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 -- | Device's frequency.
-type Freq = Integer
+type Freq = Int
 
 -- | A change in the device's frequency.
 data Drift = Inc Freq | Dec Freq
@@ -132,29 +132,20 @@ main = do
       Right ds -> answer (fst freqs) (snd freqs)
           where freqs = compute' Measuring Empty initialFreq ds
 
--- | Parse an Freq value.
---
--- >>> parse frequency "" "42"
--- Right 42
-frequency :: Parser Freq
-frequency = Token.integer (Token.makeTokenParser emptyDef)
-
 -- | Parse a Drift value.
 --
 -- >>> parse drift "" "+3"
 -- Right (Inc 3)
 -- >>> parse drift "" "-6"
 -- Right (Dec 6)
+-- >>> parse drift "" "+42  "
+-- Right (Inc 42)
 drift :: Parser Drift
 drift = do
     sign <- oneOf "+-"
-    freq <- frequency
-    return $ (if sign == '+' then Inc else Dec) freq
-
--- | Parse a Drift separator.
--- Accept either the examples from the README or the input format.
-sep :: Parser ()
-sep = (optional $ char ',') >> spaces
+    num  <- many1 digit
+    _    <- spaces
+    return $ (if sign == '+' then Inc else Dec) (read num)
 
 -- | Parse a sequence of Drift.
 --
@@ -162,3 +153,4 @@ sep = (optional $ char ',') >> spaces
 -- Right [Inc 1,Dec 2,Inc 3,Inc 1]
 drifts :: Parser [Drift]
 drifts = (sepBy drift sep) <* eof
+    where sep = optional (char ',') >> spaces
