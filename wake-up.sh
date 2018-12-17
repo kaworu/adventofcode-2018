@@ -9,17 +9,12 @@ set -e
 ROOT=$(dirname "$0")
 
 if [ $# -ne 2 -a $# -ne 3 ]; then
-    echo "usage $(basename "$0") DAY NAME [SLUG]" > /dev/stderr
+    echo "usage $(basename "$0") DAY NAME" > /dev/stderr
     exit 1
 fi
 
 DAY=$1
 NAME=$2
-if [ -n "$3" ]; then
-    SLUG=$3
-else
-    SLUG=$(echo "$NAME" | sed -e 's/[- ,]//g')
-fi
 
 DAYDIRNAME="Day ${DAY} - ${NAME}"
 DAYDIRPATH="${ROOT}/${DAYDIRNAME}"
