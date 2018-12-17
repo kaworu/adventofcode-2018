@@ -28,11 +28,11 @@ initialFreq = 0
 -- | The measured final device's frequency given the initial frequency and a
 -- sequence of changes.
 --
--- >>> calibrate 0 [+1, -2, +3, +1]
+-- >>> calibrate 0 [1, -2, 3, 1]
 -- 3
--- >>> calibrate 0 [+1, +1, +1]
+-- >>> calibrate 0 [1, 1, 1]
 -- 3
--- >>> calibrate 0 [+1, +1, -2]
+-- >>> calibrate 0 [1, 1, -2]
 -- 0
 -- >>> calibrate 0 [-1, -2, -3]
 -- -6
@@ -42,16 +42,16 @@ calibrate = foldl (adjust)
 -- | The first device's frequency reached twice given the initial frequency and
 -- a sequence of changes to cycle through.
 --
--- >>> calibrate' 0 [+1, -2, +3, +1]
--- Right 2
--- >>> calibrate' 0 [+1, -1]
--- Right 0
--- >>> calibrate' 0 [+3, +3, +4, -2, -4]
--- Right 10
--- >>> calibrate' 0 [-6, +3, +8, +5, -6]
--- Right 5
--- >>> calibrate' 0 [+7, +7, -2, -7, -4]
--- Right 14
+-- >>> calibrate' 0 [1, -2, 3, 1]
+-- 2
+-- >>> calibrate' 0 [1, -1]
+-- 0
+-- >>> calibrate' 0 [3, 3, 4, -2, -4]
+-- 10
+-- >>> calibrate' 0 [-6, 3, 8, 5, -6]
+-- 5
+-- >>> calibrate' 0 [7, 7, -2, -7, -4]
+-- 14
 calibrate' :: Freq -> [Drift] -> Freq
 calibrate' f ds = dup empty freqs
     where freqs = scanl (adjust) f $ cycle ds
