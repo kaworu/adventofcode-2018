@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Data.List
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
 
@@ -10,8 +11,8 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 -- | A coordinate in the whole piece of fabric.
 type Point = (Int, Int)
 
--- | The piece of fabric.
-type Fabric = M.Map Point Int
+-- | The piece of fabric, mapping Point to Claim id sequence.
+type Fabric = M.Map Point [Int]
 
 -- | An area of fabric claimed by an Elf.
 data Claim = Claim
@@ -27,29 +28,31 @@ points Claim { tl = (tlx, tly), br = (brx, bry) } =
 
 -- | Draw a Claim on the given Fabric.
 --
--- >>> outline M.empty $ Claim 42 (1, 2) (2, 3)
--- fromList [((1,2),1),((1,3),1),((2,2),1),((2,3),1)]
--- >>> outline M.empty $ Claim 42 (0, 0) (0, 0)
--- fromList [((0,0),1)]
-outline :: Fabric -> Claim -> Fabric
-outline fab = foldr (M.alter inc) fab . points
-    where inc Nothing  = Just 1
-          inc (Just x) = Just (x + 1)
+-- >>> outline (Claim 42 (1, 2) (2, 3)) M.empty
+-- fromList [((1,2),[42]),((1,3),[42]),((2,2),[42]),((2,3),[42])]
+-- >>> outline (Claim 42 (0, 0) (0, 0)) M.empty
+-- fromList [((0,0),[42])]
+outline :: Claim -> Fabric -> Fabric
+outline cl@Claim { ident = i } fab = foldr (M.alter $ add i) fab (points cl)
+    where add i Nothing   = Just [i]
+          add i (Just is) = Just (i:is)
 
 -- | The Fabric with only the overlapping points remaining given a sequence of
 -- Claim.
 --
--- >>> overlap [Claim 42 (1,3) (4,6), Claim 43 (3,1) (6,4), Claim 43 (5,5) (6,6)]
--- fromList [((3,3),2),((3,4),2),((4,3),2),((4,4),2)]
+-- >>> overlap [Claim 1 (1,3) (4,6), Claim 2 (3,1) (6,4), Claim 3 (5,5) (6,6)]
+-- fromList [((3,3),[1,2]),((3,4),[1,2]),((4,3),[1,2]),((4,4),[1,2])]
 overlap :: [Claim] -> Fabric
-overlap = M.filter (> 1) . outlineAll
-    where outlineAll = foldl (outline) M.empty
+overlap = M.filter (\xs -> length xs > 1) . outlineAll
+    where outlineAll = foldr (outline) M.empty
 
--- | Display the count of square inches within two or more claims.
--- correct box IDs.
-answer :: Int -> IO ()
-answer = do
-    printf "There are %d square inches of fabric within two or more claims.\n"
+-- | Display the count of square inches within two or more claims and the claim
+-- id that doesn't overlap.
+answer :: [Point] -> [Int] -> IO ()
+answer inches [intact] = do
+    printf "There are %d square inches of fabric within two or more claims," l
+    printf " and %d doesn't overlap.\n" intact
+        where l = length inches
 
 -- | Compute and display the count of square inches within two or more claims.
 main :: IO ()
@@ -57,7 +60,10 @@ main = do
     input <- getContents
     case parse claims "" input of
       Left err -> print err >> fail "parse error"
-      Right xs -> answer (M.size $ overlap xs)
+      Right xs -> answer pts (map ident xs \\ ids)
+          where fab = overlap xs -- overlapping fabric
+                pts = M.keys fab -- overlapping points
+                ids = nub $ concat $ M.elems fab -- overlapping identities
 
 -- | Parse an Elf Claim.
 --
