@@ -83,8 +83,12 @@ prototypes = find matchingDistance . pairs
 -- | Display the box IDs list checksum and the common letters between the two
 -- correct box IDs.
 answer :: Int -> Maybe [Char] -> IO ()
-answer i Nothing   = printf "The checksum is %d, there are no correct box IDs.\n" i
-answer i (Just xs) = printf "The checksum is %d, \"%s\" are the common letters between the two correct box IDs.\n" i xs
+answer i Nothing = do
+    printf "The checksum is %d," i
+    printf " and there are no correct box IDs.\n"
+answer i (Just xs) = do
+    printf "The checksum is %d," i
+    printf " and \"%s\" are the common letters between the two correct box IDs.\n" xs
 
 -- | Compute and display the rudimentary checksum of the given list of box IDs.
 main :: IO ()

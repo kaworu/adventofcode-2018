@@ -62,7 +62,9 @@ calibrate' f ds = dup empty freqs
 -- | Display the answers given the resulting frequency and the first frequency
 -- reached twice.
 answer :: Freq -> Freq -> IO ()
-answer = printf "The resulting frequency is %d and the first frequency reached twice is %d.\n"
+answer res twice = do
+    printf "The resulting frequency is %d," res
+    printf " and the first frequency reached twice is %d.\n" twice
 
 -- | Compute and the calibrated device's frequency.
 main :: IO ()
