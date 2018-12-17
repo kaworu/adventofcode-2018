@@ -58,7 +58,7 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 main :: IO ()
 main = do
     input <- getContents
-    printf "%s\n" input
+    printf "%s" input
 EOF
 
 # adventofcode2018.cabal
