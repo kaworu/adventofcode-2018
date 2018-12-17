@@ -24,3 +24,10 @@ executable Day01
                        parsec >=3.1 && <3.2,
                        containers
   default-language:    Haskell2010
+
+executable Day02
+  hs-source-dirs:      "Day 02 - Inventory Management System"
+  main-is:             Main.hs
+  build-depends:       base   >=4.9 && <4.10,
+                       parsec >=3.1 && <3.2
+  default-language:    Haskell2010
