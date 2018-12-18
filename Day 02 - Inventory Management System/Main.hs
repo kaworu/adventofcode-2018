@@ -1,11 +1,8 @@
 module Main (main) where
 
 import Data.List
-import Text.Printf (printf)
-
 import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Language
-import qualified Text.ParserCombinators.Parsec.Token as Token
+import Text.Printf (printf)
 
 -- | A box ID
 type BoxID = [Char]

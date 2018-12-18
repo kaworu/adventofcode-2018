@@ -49,10 +49,7 @@ cat <<EOF > "$MAINFILEPATH"
 module Main (main) where
 
 import Text.Printf (printf)
-
 import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Language
-import qualified Text.ParserCombinators.Parsec.Token as Token
 
 -- | TODO
 main :: IO ()
@@ -70,6 +67,7 @@ executable Day${DAY}
   build-depends:       base   >=4.9 && <4.10,
                        parsec >=3.1 && <3.2
   default-language:    Haskell2010
+  ghc-options:         -Wall
 EOF
 
 # doctest.hs

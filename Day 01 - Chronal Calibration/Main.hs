@@ -1,11 +1,8 @@
 module Main (main) where
 
 import Data.Set hiding (foldl)
-import Text.Printf (printf)
-
 import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Language
-import qualified Text.ParserCombinators.Parsec.Token as Token
+import Text.Printf (printf)
 
 -- | Device's frequency.
 type Freq = Int
@@ -23,6 +20,7 @@ adjust :: Freq -> Drift -> Freq
 adjust = (+)
 
 -- | The device's initial frequency.
+initialFreq :: Freq
 initialFreq = 0
 
 -- | The measured final device's frequency given the initial frequency and a
@@ -58,6 +56,7 @@ calibrate' f ds = dup empty freqs
           dup s (x:xs)
               | x `member` s = x
               | otherwise    = dup (x `insert` s) xs
+          dup _ [] = error "dup: empty list"
 
 -- | Display the answers given the resulting frequency and the first frequency
 -- reached twice.
