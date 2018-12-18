@@ -41,7 +41,7 @@ outline cl@Claim { ident = i } fab = foldr (M.alter $ add i) fab (points cl)
 -- fromList [((3,3),[1,2]),((3,4),[1,2]),((4,3),[1,2]),((4,4),[1,2])]
 overlap :: [Claim] -> Fabric
 overlap = M.filter (\xs -> length xs > 1) . outlineAll
-    where outlineAll = foldr (outline) M.empty
+    where outlineAll = foldr outline M.empty
 
 -- | Display the count of square inches within two or more claims and the claim
 -- id that doesn't overlap.
@@ -81,8 +81,8 @@ claim = do
     _ <- spaces
     let tlx = read left
         tly = read top
-        brx = (read width) + tlx - 1
-        bry = (read height) + tly - 1
+        brx = read width + tlx - 1
+        bry = read height + tly - 1
      in return $ Claim (read i) (tlx, tly) (brx, bry)
 
 -- | Parse a sequence Elf Claim.
@@ -90,4 +90,4 @@ claim = do
 -- >>> parse claims "" "#1 @ 1,3: 4x4 #2 @ 3,1: 4x4 #3 @ 5,5: 2x2"
 -- Right [Claim {ident = 1, tl = (1,3), br = (4,6)},Claim {ident = 2, tl = (3,1), br = (6,4)},Claim {ident = 3, tl = (5,5), br = (6,6)}]
 claims :: Parser [Claim]
-claims = (sepBy1 claim spaces) <* eof
+claims = sepBy1 claim spaces <* eof

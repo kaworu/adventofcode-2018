@@ -35,7 +35,7 @@ initialFreq = 0
 -- >>> calibrate 0 [-1, -2, -3]
 -- -6
 calibrate :: Freq -> [Drift] -> Freq
-calibrate = foldl (adjust)
+calibrate = foldl adjust
 
 -- | The first device's frequency reached twice given the initial frequency and
 -- a sequence of changes to cycle through.
@@ -52,7 +52,7 @@ calibrate = foldl (adjust)
 -- 14
 calibrate' :: Freq -> [Drift] -> Freq
 calibrate' f ds = dup empty freqs
-    where freqs = scanl (adjust) f $ cycle ds
+    where freqs = scanl adjust f $ cycle ds
           dup s (x:xs)
               | x `member` s = x
               | otherwise    = dup (x `insert` s) xs
@@ -89,12 +89,12 @@ drift = do
     digits <- many1 digit
     _      <- spaces
     let num = read digits
-     in return $ (if sign == '+' then num else (- num))
+     in return (if sign == '+' then num else (- num))
 
 -- | Parse a sequence of Drift.
 --
 -- >>> parse drifts "" "+1, -2, +3, +1"
 -- Right [1,-2,3,1]
 drifts :: Parser [Drift]
-drifts = (sepBy drift sep) <* eof
+drifts = sepBy drift sep <* eof
     where sep = optional (char ',') >> spaces

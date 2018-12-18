@@ -1,11 +1,12 @@
 module Main (main) where
 
+import Control.Arrow
 import Data.List
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 
 -- | A box ID
-type BoxID = [Char]
+type BoxID = String
 
 -- | The frequency of each elements within a list.
 --
@@ -26,7 +27,7 @@ type BoxID = [Char]
 -- >>> freq []
 -- []
 freq :: Ord a => [a] -> [(a, Int)]
-freq = map (\xs -> (head xs, length xs)) . group . sort
+freq = map (head &&& length) . group . sort
 
 -- | The box IDs list checksum.
 --
@@ -35,9 +36,9 @@ freq = map (\xs -> (head xs, length xs)) . group . sort
 -- >>> checksum []
 -- 0
 checksum :: [BoxID] -> Int
-checksum xs = (length twos) * (length threes)
-    where twos   = filter (any (==2)) freqs
-          threes = filter (any (==3)) freqs
+checksum xs = length twos * length threes
+    where twos   = filter (elem 2) freqs
+          threes = filter (elem 3) freqs
           freqs  = map (map snd . freq) xs
 
 -- | The hamming distance of two lists.
@@ -74,12 +75,12 @@ pairs l = [(x, y) | (x:ys) <- tails l, y <- ys]
 -- >>> prototypes []
 -- Nothing
 prototypes :: [BoxID] -> Maybe (BoxID, BoxID)
-prototypes = find matchingDistance . pairs
-    where matchingDistance (x, y) = (distance x y) == 1
+prototypes = find oneCharDiff . pairs
+    where oneCharDiff (x, y) = distance x y == 1
 
 -- | Display the box IDs list checksum and the common letters between the two
 -- correct box IDs.
-answer :: Int -> Maybe [Char] -> IO ()
+answer :: Int -> Maybe String -> IO ()
 answer i Nothing = do
     printf "The checksum is %d," i
     printf " and there are no correct box IDs.\n"
@@ -112,4 +113,4 @@ boxId = do
 -- >>> parse boxIds "" "abcdef bababc abbcde"
 -- Right ["abcdef","bababc","abbcde"]
 boxIds :: Parser [BoxID]
-boxIds = (sepBy1 boxId spaces) <* eof
+boxIds = sepBy1 boxId spaces <* eof
