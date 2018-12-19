@@ -87,7 +87,7 @@ drift :: Parser Drift
 drift = do
     sign   <- oneOf "+-"
     digits <- many1 digit
-    _      <- spaces
+    _ <- spaces
     let num = read digits
      in return (if sign == '+' then num else (- num))
 
