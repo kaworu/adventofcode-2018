@@ -64,7 +64,7 @@ cat <<EOF >> "$CABALFILEPATH"
 executable Day${DAY}
   hs-source-dirs:      "${DAYDIRNAME}"
   main-is:             ${MAINFILENAME}
-  build-depends:       base   >=4.9 && <4.10,
+  build-depends:       base   >=4.12 && <4.13,
                        parsec >=3.1 && <3.2
   default-language:    Haskell2010
   ghc-options:         -Wall

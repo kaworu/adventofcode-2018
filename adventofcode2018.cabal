@@ -13,14 +13,15 @@ cabal-version:       >=1.10
 test-suite doctests
   type:                exitcode-stdio-1.0
   main-is:             doctest.hs
-  build-depends:       base, doctest
+  build-depends:       base >= 4.12 && < 4.13,
+                       doctest
   default-language:    Haskell2010
   ghc-options:         -Wall -threaded
 
 executable Day01
   hs-source-dirs:      "Day 01 - Chronal Calibration"
   main-is:             Main.hs
-  build-depends:       base   >=4.9 && <4.10,
+  build-depends:       base >= 4.12 && < 4.13,
                        parsec >=3.1 && <3.2,
                        containers
   default-language:    Haskell2010
@@ -29,7 +30,7 @@ executable Day01
 executable Day02
   hs-source-dirs:      "Day 02 - Inventory Management System"
   main-is:             Main.hs
-  build-depends:       base   >=4.9 && <4.10,
+  build-depends:       base >= 4.12 && < 4.13,
                        parsec >=3.1 && <3.2
   default-language:    Haskell2010
   ghc-options:         -Wall
@@ -37,7 +38,7 @@ executable Day02
 executable Day03
   hs-source-dirs:      "Day 03 - No Matter How You Slice It"
   main-is:             Main.hs
-  build-depends:       base   >=4.9 && <4.10,
+  build-depends:       base >= 4.12 && < 4.13,
                        parsec >=3.1 && <3.2,
                        containers
   default-language:    Haskell2010
