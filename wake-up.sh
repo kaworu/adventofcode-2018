@@ -48,8 +48,8 @@ EOF
 cat <<EOF > "$MAINFILEPATH"
 module Main (main) where
 
-import Text.Printf (printf)
 import Text.ParserCombinators.Parsec
+import Text.Printf (printf)
 
 -- | TODO
 main :: IO ()
