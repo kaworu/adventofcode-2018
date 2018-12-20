@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Control.Arrow
+import Control.Arrow ((&&&))
 import Data.List
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
