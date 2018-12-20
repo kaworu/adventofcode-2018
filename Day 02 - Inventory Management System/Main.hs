@@ -42,7 +42,8 @@ checksum xs = length twos * length threes
           freqs  = map (map snd . freq) xs
 
 -- | The hamming distance of two lists.
--- | see https://stackoverflow.com/a/52277553.
+--
+-- see https://stackoverflow.com/a/52277553.
 --
 -- >>> distance "abcde" "axcye"
 -- 2
@@ -51,8 +52,9 @@ checksum xs = length twos * length threes
 distance :: Eq a => [a] -> [a] -> Int
 distance xs ys = length $ filter id $ zipWith (/=) xs ys
 
--- | All uniques pairs of a list.
--- | see https://stackoverflow.com/a/34045121
+-- | All unique pairs of a list.
+--
+-- see https://stackoverflow.com/a/34045121
 --
 -- >>> pairs [1, 2, 3, 4]
 -- [(1,2),(1,3),(1,4),(2,3),(2,4),(3,4)]
