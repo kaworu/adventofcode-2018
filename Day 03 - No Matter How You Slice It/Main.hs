@@ -78,7 +78,7 @@ claim = do
     top    <- spaces >> char ',' >> spaces >> many1 digit
     width  <- spaces >> char ':' >> spaces >> many1 digit
     height <- spaces >> char 'x' >> spaces >> many1 digit
-    _ <- spaces
+    spaces
     let tlx = read left
         tly = read top
         brx = read width + tlx - 1

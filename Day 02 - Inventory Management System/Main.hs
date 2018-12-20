@@ -105,7 +105,7 @@ main = do
 boxId :: Parser BoxID
 boxId = do
     s <- many1 lower
-    _ <- spaces
+    spaces
     return s
 
 -- | Parse a sequence of BoxID.
