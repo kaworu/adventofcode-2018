@@ -30,7 +30,7 @@ points Claim { tl = (tlx, tly), br = (brx, bry) } =
 -- >>> outline (Claim 42 (0, 0) (0, 0)) M.empty
 -- fromList [((0,0),[42])]
 outline :: Claim -> Fabric -> Fabric
-outline cl@Claim { ident = i } fab = foldr (M.alter $ add i) fab (points cl)
+outline cl fab = foldr (M.alter $ add $ ident cl) fab (points cl)
     where add x Nothing   = Just [x]
           add x (Just xs) = Just (x:xs)
 
