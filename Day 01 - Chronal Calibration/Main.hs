@@ -70,7 +70,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse drifts "" input of
-      Left err -> print err >> fail "parse error"
+      Left err -> error (show err)
       Right xs -> answer calibrated calibrated'
           where calibrated  = calibrate  initialFreq xs
                 calibrated' = calibrate' initialFreq xs

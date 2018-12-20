@@ -61,7 +61,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse claims "" input of
-      Left err -> print err >> fail "parse error"
+      Left err -> error (show err)
       Right xs -> answer (length pts) (map ident xs \\ ids)
           where fab = overlap xs -- overlapping fabric
                 pts = M.keys fab -- overlapping points
