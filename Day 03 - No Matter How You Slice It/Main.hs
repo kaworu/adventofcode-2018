@@ -12,11 +12,8 @@ type Point = (Int, Int)
 type Fabric = M.Map Point [Int]
 
 -- | An area of fabric claimed by an Elf.
-data Claim = Claim
-    { ident :: Int
-    , tl :: Point
-    , br :: Point
-    } deriving (Show)
+data Claim = Claim { ident :: Int, tl, br :: Point }
+    deriving (Show)
 
 -- | The Elf Claim's points.
 points :: Claim -> [Point]
