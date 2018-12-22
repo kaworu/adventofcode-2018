@@ -65,7 +65,7 @@ distance xs ys = length $ filter id $ zipWith (/=) xs ys
 -- >>> pairs ["fst", "snd"]
 -- [("fst","snd")]
 pairs :: [a] -> [(a, a)]
-pairs l = [(x, y) | (x:ys) <- tails l, y <- ys]
+pairs l = [(x, y) | (x : ys) <- tails l, y <- ys]
 
 -- | The pair of BoxID which differ by exactly one character at the same
 -- position.

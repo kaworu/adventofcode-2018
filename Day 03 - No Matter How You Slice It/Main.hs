@@ -29,7 +29,7 @@ points Claim { tl = (tlx, tly), br = (brx, bry) } =
 outline :: Claim -> Fabric -> Fabric
 outline cl fab = foldr (M.alter $ add $ ident cl) fab (points cl)
     where add x Nothing   = Just [x]
-          add x (Just xs) = Just (x:xs)
+          add x (Just xs) = Just (x : xs)
 
 -- | The Fabric with only the overlapping points remaining given a sequence of
 -- Claim.

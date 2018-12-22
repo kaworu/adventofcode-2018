@@ -53,7 +53,7 @@ calibrate = foldl adjust
 calibrate' :: Freq -> [Drift] -> Freq
 calibrate' f ds = dup empty freqs
     where freqs = scanl adjust f $ cycle ds
-          dup s (x:xs)
+          dup s (x : xs)
               | x `member` s = x
               | otherwise    = dup (x `insert` s) xs
           dup _ [] = error "dup: empty list"
