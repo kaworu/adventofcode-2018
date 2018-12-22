@@ -1,8 +1,10 @@
 module Main (main) where
 
+import Control.Arrow ((&&&))
 import Data.Function
 import Data.Functor.Identity (Identity)
 import Data.List
+import Data.Ord
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock
 import Data.Time.LocalTime
@@ -23,6 +25,9 @@ import Text.Printf (printf)
 -- | ID of the guards on duty.
 type Guard = Int
 
+-- | A minute count after midnight (0).
+type Minute = Int
+
 -- | Record written on the wall.
 data Record = Shift  { timing :: UTCTime, gid :: Int }
             | Asleep { timing :: UTCTime }
@@ -32,6 +37,20 @@ data Record = Shift  { timing :: UTCTime, gid :: Int }
 -- | A time frame during which the guard slept.
 data Nap = Sleeping { guard :: Guard, from, to :: UTCTime }
     deriving (Show)
+
+-- | Statistic about a guard's sleep during shift with the total of minutes
+-- slept, and the count of the most slept minute.
+data Stat = Stat { who :: Guard, total :: Int, quietest :: (Minute, Int) }
+    deriving (Show)
+
+-- | The frequency of each elements within a list.
+--
+-- see Day 02
+--
+-- >>> freq "bababc"
+-- [('a',2),('b',3),('c',1)]
+freq :: Ord a => [a] -> [(a, Int)]
+freq = map (head &&& length) . group . sort
 
 -- | Whole minutes count in the given number of seconds.
 --
@@ -43,41 +62,6 @@ data Nap = Sleeping { guard :: Guard, from, to :: UTCTime }
 -- 1
 sec2min :: (RealFrac a) => a -> Int
 sec2min = floor . (/60)
-
--- | Count of whole minute slept.
---
--- >>> duration $ sleep 10 "1518-11-01 00:05" "1518-11-01 00:25"
--- 20
--- >>> duration $ sleep 10 "1518-11-01 00:30" "1518-11-01 00:55"
--- 25
--- >>> duration $ sleep 99 "1518-11-02 00:40" "1518-11-02 00:50"
--- 10
--- >>> duration $ sleep 10 "1518-11-03 00:24" "1518-11-03 00:29"
--- 5
--- >>> duration $ sleep 99 "1518-11-04 00:36" "1518-11-04 00:46"
---10
--- >>> duration $ sleep 99 "1518-11-05 00:45" "1518-11-05 00:55"
---10
-duration :: Nap -> Int
-duration n = sec2min $ diffUTCTime (to n) (from n)
-
--- | The guard having spent the most time sleep.
---
--- >>> :{
---     laziest [ sleep 10 "1518-11-01 00:05" "1518-11-01 00:25"
---             , sleep 10 "1518-11-01 00:30" "1518-11-01 00:55"
---             , sleep 99 "1518-11-02 00:40" "1518-11-02 00:50"
---             , sleep 10 "1518-11-03 00:24" "1518-11-03 00:29"
---             , sleep 99 "1518-11-04 00:36" "1518-11-04 00:46"
---             , sleep 99 "1518-11-05 00:45" "1518-11-05 00:55"]
--- :}
--- 10
-laziest :: [Nap] -> Guard
-laziest = sleptTheMost . groupByGuard . sortByGuard
-    where sortByGuard  = sortBy (compare `on` guard)
-          groupByGuard = groupBy ((==) `on` guard)
-          sleptTheMost = guard . head . maximumBy (compare `on` totalNapTime)
-          totalNapTime = sum . map duration
 
 -- | The sequence of minutes after midnight when the guard was asleep.
 --
@@ -93,44 +77,64 @@ laziest = sleptTheMost . groupByGuard . sortByGuard
 -- [36,37,38,39,40,41,42,43,44,45]
 -- >>> minutes $ sleep 99 "1518-11-05 00:45" "1518-11-05 00:55"
 -- [45,46,47,48,49,50,51,52,53,54]
-minutes :: Nap -> [Int]
+minutes :: Nap -> [Minute]
 minutes n = [x .. (y - 1)]
     where x = sec2min $ utctDayTime (from n)
           y = sec2min $ utctDayTime (to n)
 
--- | The most slept minute after midnight.
+-- | Nap statistic numbers cruncher.
 --
 -- >>> :{
---     quietest [ sleep 10 "1518-11-01 00:05" "1518-11-01 00:25"
---              , sleep 10 "1518-11-01 00:30" "1518-11-01 00:55"
---              , sleep 10 "1518-11-03 00:24" "1518-11-03 00:29"]
+--     stats [ sleep 10 "1518-11-01 00:05" "1518-11-01 00:25"
+--           , sleep 10 "1518-11-01 00:30" "1518-11-01 00:55"
+--           , sleep 99 "1518-11-02 00:40" "1518-11-02 00:50"
+--           , sleep 10 "1518-11-03 00:24" "1518-11-03 00:29"
+--           , sleep 99 "1518-11-04 00:36" "1518-11-04 00:46"
+--           , sleep 99 "1518-11-05 00:45" "1518-11-05 00:55"]
 -- :}
--- 24
-quietest :: [Nap] -> Int
-quietest = longest . group . sort . concatMap minutes
-    where longest = head . maximumBy (compare `on` length)
+-- [Stat {who = 10, total = 50, quietest = (24,2)},Stat {who = 99, total = 30, quietest = (45,3)}]
+stats :: [Nap] -> [Stat]
+stats = map compute . groupByGuard . sortByGuard
+    where sortByGuard  = sortBy (comparing guard)
+          groupByGuard = groupBy ((==) `on` guard)
+          compute xs   = stat (guard $ head xs) (freq $ concatMap minutes xs)
+          stat g freqs = Stat g (computeTotal freqs) (findQuietest freqs)
+          computeTotal = sum . map snd
+          findQuietest = maximumBy (comparing snd)
 
--- | Display the guard that has the most minutes asleep, and the minute spend
--- asleep the most.
-answer :: (Guard, Int) -> IO ()
-answer (g, m) = do
-    printf "The chosen guard ID is %d" g
-    printf " the chosen minute is %d" m
-    printf " (%d * %d = %d).\n" g m (g * m)
+-- | Strategy 1: the guard that has the most minutes asleep.
+--
+-- >> strategy1 (Stat 10 50 (24 ,2)) (Stat 99 30 (45, 3))
+-- LT
+strategy1 :: Stat -> Stat -> Ordering
+strategy1 = comparing total
 
--- | Find the guard that has the most minutes asleep, and the minute spend
--- asleep the most.
+-- | Strategy 2: the guard the most frequently asleep on the same minute.
+--
+-- >> strategy2 (Stat 10 50 (24 ,2)) (Stat 99 30 (45, 3))
+-- LG
+strategy2 :: Stat -> Stat -> Ordering
+strategy2 = comparing (snd . quietest)
+
+-- | Display the laziest guard info for a given strategy.
+answer :: Int -> Stat -> IO ()
+answer i Stat {who = g, total = t, quietest = (m, n)} = do
+    printf "Strategy %d:" i
+    printf " the chosen guard ID is %d (asleep %d minutes in total)" g t
+    printf " and the chosen minute is %d (slept %d times):" m n
+    printf " %d * %d = %d.\n" g m (g * m)
+
+-- | Find the laziest guard using both strategies.
 main :: IO ()
 main = do
     input <- getContents
     case parse records "" input of
       Left err -> error (show err)
-      Right xs -> case parse naps "" xs of
+      Right rs -> case parse naps "" rs of
           Left err -> error (show err)
-          Right ns ->
-              let sloth = laziest ns
-                  ns' = filter (\n -> guard n == sloth) ns
-               in answer (sloth, quietest ns')
+          Right ns -> let ss = stats ns in do
+              answer 1 (maximumBy strategy1 ss)
+              answer 2 (maximumBy strategy2 ss)
 
 {-|
    Uses Parsec in two phases. The first one parses the input string into a
@@ -199,7 +203,7 @@ records = do
     xs <- sepBy1 record spaces
     eof
     return (unshuffle xs)
-        where unshuffle = sortBy (compare `on` timing)
+        where unshuffle = sortBy (comparing timing)
 
 -- | Update the source position when parsing Naps from Records.
 update :: SourcePos -> Record -> [Record] -> SourcePos
