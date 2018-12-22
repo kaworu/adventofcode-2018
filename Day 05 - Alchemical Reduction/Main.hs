@@ -1,6 +1,9 @@
 module Main (main) where
 
 import Data.Char
+import Data.List
+import Data.Ord
+import qualified Data.Set as S
 import Text.Printf (printf)
 
 -- | Small units forming a Polymer.
@@ -9,51 +12,108 @@ type Unit = Char
 -- | Long unit sequence composing the suit's material.
 type Polymer = [Unit]
 
+-- | Unit polarity conversion.
+--
+-- >>> positive 'a'
+-- 'a'
+-- >>> positive 'A'
+-- 'a'
+-- >>> negative 'a'
+-- 'A'
+-- >>> negative 'A'
+-- 'A'
+-- >>> normal 'a'
+-- 'a'
+-- >>> normal 'A'
+-- 'a'
+positive, negative, normal :: Unit -> Unit
+positive = toLower
+negative = toUpper
+normal   = positive
+
+-- | The unit of the same type and opposite polarity.
+--
+-- >>> opposite 'a'
+-- 'A'
+-- >>> opposite 'A'
+-- 'a'
+opposite :: Unit -> Unit
+opposite x
+  | isUpper x = positive x
+  | otherwise = negative x
+
 -- | True if x and y are of the same type and opposite polarity,
 -- False otherwise.
 --
--- >>> react 'r' 'R'
+-- >>> trigger 'r' 'R'
 -- True
--- >>> react 'A' 'a'
+-- >>> trigger 'A' 'a'
 -- True
--- >>> react 'r' 's'
+-- >>> trigger 'r' 's'
 -- False
--- >>> react 'B' 'B'
+-- >>> trigger 'B' 'B'
 -- False
-react :: Unit -> Unit -> Bool
-react x y = abs (ord x - ord y) == 32
+trigger :: Unit -> Unit -> Bool
+trigger x y = x == opposite y
+
+-- | Normalized units of the given Polymer.
+--
+-- >>> units "dabAcCaCBAcCcaDA"
+-- fromList "abcd"
+units :: Polymer -> S.Set Unit
+units = foldr S.insert S.empty . map normal
+
+-- | The Polymer excluding the units of the same type as the given Unit.
+--
+-- >>> remove 'a' "dabAcCaCBAcCcaDA"
+-- "dbcCCBcCcD"
+-- >>> remove 'A' "dabAcCaCBAcCcaDA"
+-- "dbcCCBcCcD"
+-- >>> remove 'b' "dabAcCaCBAcCcaDA"
+-- "daAcCaCAcCcaDA"
+-- >>> remove 'c' "dabAcCaCBAcCcaDA"
+-- "dabAaBAaDA"
+-- >>> remove 'D' "dabAcCaCBAcCcaDA"
+-- "abAcCaCBAcCcaA"
+remove :: Unit -> Polymer -> Polymer
+remove x = filter (\u -> normal u /= normal x)
 
 -- | The Polymer's fully reacted form.
 --
--- >>> reduce "aA"
+-- >>> react "aA"
 -- ""
--- >>> reduce "abBA"
+-- >>> react "abBA"
 -- ""
--- >>> reduce "aabAAB"
+-- >>> react "aabAAB"
 -- "aabAAB"
--- >>> reduce "dabAcCaCBAcCcaDA"
+-- >>> react "dabAcCaCBAcCcaDA"
 -- "dabCBAcaDA"
-reduce :: Polymer -> Polymer
-reduce []  = []
-reduce [x] = [x]
-reduce (x : xs)
-  | null xs'    = [x]
-  | x `react` y = ys
-  | otherwise   = x : xs'
-  where xs' = reduce xs
+react :: Polymer -> Polymer
+react []  = []
+react [x] = [x]
+react (x : xs)
+  | null xs'      = [x]
+  | x `trigger` y = ys
+  | otherwise     = x : xs'
+  where xs' = react xs
         (y:ys) = xs'
 
--- | Display how many units remain after fully reacting the given Polymer.
-answer :: Polymer -> IO ()
-answer p = do
-    printf "%d units remain after the polymer has fully reacted.\n" (length p)
+-- | Display how many units remain after fully reacting the Polymer and its
+-- shortest improved version.
+answer :: Polymer -> Polymer -> IO ()
+answer p s = do
+    printf "%d units remain after the polymer has fully reacted,\n" (length p)
+    printf "and the shortest improved polymer contains %d units.\n" (length s)
 
--- | Compute and display how many units remain after fully reacting the given
--- Polymer.
+-- | Compute and display how many units remain after fully reacting the Polymer
+-- and its shortest improved version.
 main :: IO ()
 main = do
     input <- getContents
-    answer $ reduce (rstrip input)
+    let reacted = react (rstrip input)
+        removed = map (\u -> remove u reacted) (S.elems $ units reacted)
+        shortest = minimumBy (comparing length) $ map react removed
+     in answer reacted shortest
 
 -- | The given String without trailing whitespace characters.
 --
