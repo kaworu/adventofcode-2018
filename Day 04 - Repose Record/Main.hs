@@ -202,8 +202,7 @@ records :: Parser [Record]
 records = do
     xs <- sepBy1 record spaces
     eof
-    return (unshuffle xs)
-        where unshuffle = sortBy (comparing timing)
+    return $ sortBy (comparing timing) xs
 
 -- | Update the source position when parsing Naps from Records.
 update :: SourcePos -> Record -> [Record] -> SourcePos
@@ -228,7 +227,7 @@ wakes = tokenPrim show update go where
     go Awake {timing = t} = Just t
     go _ = Nothing
 
--- | Parse a Nap, i.e. a sequence of [Asleep, Awake], without the guard
+-- | Parse a Nap, i.e. an Asleep followed by an Awake, without the guard
 -- information.
 nap :: Parsec [Record] () (Guard -> Nap)
 nap = do
