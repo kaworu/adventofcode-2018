@@ -14,6 +14,9 @@ type Polymer = [Unit]
 
 -- | Unit polarity conversion.
 --
+-- NOTE: Arbitrarily choose lower-case as "positive" polarity and upper-case as
+-- "negative" polarity.
+--
 -- >>> positive 'a'
 -- 'a'
 -- >>> positive 'A'
@@ -31,7 +34,7 @@ positive = toLower
 negative = toUpper
 normal   = positive
 
--- | The unit of the same type and opposite polarity.
+-- | The unit of the same type, opposite polarity.
 --
 -- >>> opposite 'a'
 -- 'A'
@@ -56,7 +59,8 @@ opposite x
 trigger :: Unit -> Unit -> Bool
 trigger x y = x == opposite y
 
--- | Normalized units of the given Polymer.
+-- | Set of normalized (i.e. of positive polarity) units composing the given
+-- Polymer.
 --
 -- >>> units "dabAcCaCBAcCcaDA"
 -- fromList "abcd"
