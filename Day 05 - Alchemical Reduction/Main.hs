@@ -65,7 +65,7 @@ trigger x y = x == opposite y
 -- >>> units "dabAcCaCBAcCcaDA"
 -- fromList "abcd"
 units :: Polymer -> S.Set Unit
-units = foldr S.insert S.empty . map normal
+units = foldr (S.insert . normal) S.empty
 
 -- | The Polymer excluding the units of the same type as the given Unit.
 --
@@ -115,7 +115,7 @@ main :: IO ()
 main = do
     input <- getContents
     let reacted = react (rstrip input)
-        removed = map (\u -> remove u reacted) (S.elems $ units reacted)
+        removed = map (`remove` reacted) (S.elems $ units reacted)
         shortest = minimumBy (comparing length) $ map react removed
      in answer reacted shortest
 
