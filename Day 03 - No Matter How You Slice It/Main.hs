@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Data.List
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 
@@ -9,7 +9,7 @@ import Text.Printf (printf)
 type Point = (Int, Int)
 
 -- | The piece of fabric, mapping Point to Claim id sequence.
-type Fabric = M.Map Point [Int]
+type Fabric = Map.Map Point [Int]
 
 -- | An area of fabric claimed by an Elf.
 data Claim = Claim { ident :: Int, tl, br :: Point }
@@ -22,12 +22,12 @@ points Claim { tl = (tlx, tly), br = (brx, bry) } =
 
 -- | Draw a Claim on the given Fabric.
 --
--- >>> outline (Claim 42 (1, 2) (2, 3)) M.empty
+-- >>> outline (Claim 42 (1, 2) (2, 3)) Map.empty
 -- fromList [((1,2),[42]),((1,3),[42]),((2,2),[42]),((2,3),[42])]
--- >>> outline (Claim 42 (0, 0) (0, 0)) M.empty
+-- >>> outline (Claim 42 (0, 0) (0, 0)) Map.empty
 -- fromList [((0,0),[42])]
 outline :: Claim -> Fabric -> Fabric
-outline cl fab = foldr (M.alter $ add $ ident cl) fab (points cl)
+outline cl fab = foldr (Map.alter $ add $ ident cl) fab (points cl)
     where add x Nothing   = Just [x]
           add x (Just xs) = Just (x : xs)
 
@@ -37,8 +37,8 @@ outline cl fab = foldr (M.alter $ add $ ident cl) fab (points cl)
 -- >>> overlap [Claim 1 (1,3) (4,6), Claim 2 (3,1) (6,4), Claim 3 (5,5) (6,6)]
 -- fromList [((3,3),[1,2]),((3,4),[1,2]),((4,3),[1,2]),((4,4),[1,2])]
 overlap :: [Claim] -> Fabric
-overlap = M.filter (\xs -> length xs > 1) . outlineAll
-    where outlineAll = foldr outline M.empty
+overlap = Map.filter (\xs -> length xs > 1) . outlineAll
+    where outlineAll = foldr outline Map.empty
 
 -- | Display the count of square inches within two or more claims and the claim
 -- id that doesn't overlap.
@@ -61,8 +61,8 @@ main = do
       Left err -> error (show err)
       Right xs -> answer (length pts) (map ident xs \\ ids)
           where fab = overlap xs -- overlapping fabric
-                pts = M.keys fab -- overlapping points
-                ids = nub $ concat $ M.elems fab -- overlapping identities
+                pts = Map.keys fab -- overlapping points
+                ids = nub $ concat $ Map.elems fab -- overlapping identities
 
 -- | Parse an Elf Claim.
 --

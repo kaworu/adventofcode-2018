@@ -3,7 +3,7 @@ module Main (main) where
 import Data.Char
 import Data.List
 import Data.Ord
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import Text.Printf (printf)
 
 -- | Small units forming a Polymer.
@@ -64,8 +64,8 @@ trigger x y = x == opposite y
 --
 -- >>> units "dabAcCaCBAcCcaDA"
 -- fromList "abcd"
-units :: Polymer -> S.Set Unit
-units = foldr (S.insert . normal) S.empty
+units :: Polymer -> Set.Set Unit
+units = foldr (Set.insert . normal) Set.empty
 
 -- | The Polymer excluding the units of the same type as the given Unit.
 --
@@ -115,7 +115,7 @@ main :: IO ()
 main = do
     input <- getContents
     let reacted = react (rstrip input)
-        removed = map (`remove` reacted) (S.elems $ units reacted)
+        removed = map (`remove` reacted) (Set.elems $ units reacted)
         shortest = minimumBy (comparing length) $ map react removed
      in answer reacted shortest
 
