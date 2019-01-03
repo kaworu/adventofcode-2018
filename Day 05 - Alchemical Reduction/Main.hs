@@ -100,7 +100,7 @@ react (x : xs)
   | x `trigger` y = ys
   | otherwise     = x : xs'
   where xs' = react xs
-        (y:ys) = xs'
+        (y : ys) = xs'
 
 -- | Display how many units remain after fully reacting the Polymer and its
 -- shortest improved version.
