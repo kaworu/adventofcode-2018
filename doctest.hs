@@ -10,3 +10,4 @@ main = do
     doctest ["Day 03 - No Matter How You Slice It/Main.hs"]
     doctest ["Day 04 - Repose Record/Main.hs"]
     doctest ["Day 05 - Alchemical Reduction/Main.hs"]
+    doctest ["Day 06 - Chronal Coordinates/Main.hs"]
