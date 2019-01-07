@@ -9,11 +9,37 @@ import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 
 -- | A coordinate from the network's grid.
--- NOTE: By convention (0, 0) is the top-left corner.
 type Point = (Int, Int)
 
--- | The bottom-right Point of the square starting from (0, 0) containing all
--- the given points.
+-- | The grid's top-left corner.
+zero :: Point
+zero = (0, 0)
+
+-- | The vector addition of two points.
+--
+-- >>> add (-1, 2) (3, -6)
+-- (2,-4)
+-- >>> add (1, 6) (8, 3)
+-- (9,9)
+add :: Point -> Point -> Point
+add (x0, y0) (x1, y1) = (x0 + x1, y0 + y1)
+
+-- | The centroid of the given points.
+--
+-- see https://en.wikipedia.org/wiki/Centroid#Of_a_finite_set_of_points
+--
+-- >>> centroid [(-1, 2), (3, -6)]
+-- (1,-2)
+-- >>> centroid [(1, 1), (1, 6), (8, 3), (3, 4), (5, 5), (8, 9)]
+-- (4,5)
+-- >>> centroid []
+-- (0,0)
+centroid :: [Point] -> Point
+centroid xs = (avg mx, avg my)
+    where avg x = round $ realToFrac x / (genericLength xs :: Double)
+          (mx, my) = foldl' add zero xs
+
+-- | The bottom-right point of the square containing all the given points.
 --
 -- >>> limit [(1, 1), (1, 6), (8, 3), (3, 4), (5, 5), (8, 9)]
 -- (8,9)
@@ -22,8 +48,9 @@ type Point = (Int, Int)
 -- >>> limit []
 -- (0,0)
 limit :: [Point] -> Point
-limit [] = (0, 0)
-limit xs = (maximum $ map fst xs, maximum $ map snd xs)
+limit [] = zero
+limit xs = (max' fst, max' snd)
+    where max' f = maximum $ map f xs
 
 -- | Sized area of closest locations, either finite or infinite.
 data Area = Infinite | Finite Int
@@ -52,24 +79,42 @@ expand (Finite x) = Finite (x + 1)
 -- | Manhattan distance from a Point relative to another.
 type Distance = Int
 
+-- | Manhattan's distance between two points.
+--
+-- >>> distance (4, 3) (1, 1)
+-- 5
+-- >>> distance (4, 3) (1, 6)
+-- 6
+-- >>> distance (4, 3) (8, 3)
+-- 4
+-- >>> distance (4, 3) (3, 4)
+-- 2
+-- >>> distance (4, 3) (5, 5)
+-- 3
+-- >>> distance (4, 3) (8, 9)
+-- 10
+distance :: Point -> Point -> Distance
+distance (x0, y0) (x1, y1) = abs (x0 - x1) + abs (y0 - y1)
+
 -- | Identifier for the listed coordinates.
 type Color = Int
 
 -- | A location in the grid is defined by its distance with respect to it
 -- closest color(s). It is tied if it has more than one color. A listed
 -- coordinate's location has a distance of 0.
-data Location = Location { distance :: Distance, colors :: [Color] }
+data Location = Location Distance [Color]
     deriving (Show)
 
--- | The location network is defined by its size and its grid.
-data Net = Net { width, height :: Int, grid :: Map.Map Point Location }
+-- | The location network is defined by its width, height, and its grid.
+data Net = Net Int Int (Map.Map Point Location)
 
 -- | Show a network kind of like the README present it.
 -- We use comma (,) for unknown location instead of dot (.) because dot mean
 -- tied.
 instance Show Net where
-    show net = intercalate "\n" (map glyphs rows)
-        where rows = groupBy ((==) `on` snd) (points net)
+    show net@(Net w h _) = intercalate "\n" (map glyphs rows)
+        where rows = groupBy ((==) `on` snd) pts
+              pts = [(x, y) | y <- [0..h], x <- [0 ..w]]
               glyphs = map $ glyph . locate net
               glyph Nothing = ',' -- unknown
               glyph (Just (Location 0 [c])) = chr (ord 'A' + c)
@@ -82,15 +127,11 @@ blank (w, h) = Net w h Map.empty
 
 -- | The location in the network at the given Point, if any.
 locate :: Net -> Point -> Maybe Location
-locate net (x, y) = Map.lookup (x, y) (grid net)
+locate (Net _ _ g) (x, y) = Map.lookup (x, y) g
 
 -- | Replace or create the location in the network at the given Point.
 update :: Net -> Point -> Location -> Net
 update (Net w h g) (x, y) l = Net w h $ Map.insert (x, y) l g
-
--- | All the network's points.
-points :: Net -> [Point]
-points (Net w h _) = [(x, y) | y <- [0..h], x <- [0..w]]
 
 -- | Compute each network's color area size (both finite and infinite).
 areas :: Net -> Map.Map Color Area
@@ -102,50 +143,87 @@ areas (Net w h g) = Map.foldrWithKey mark Map.empty g
           border (x, y) = x == 0 || x == w || y == 0 || y == h
           increase = Just . maybe (Finite 1) expand
 
--- | A flood fill step painting a color at a position.
+-- | A flood fill request to paint a color at a position.
 data Brush = Brush { position :: Point, color :: Color }
     deriving (Show)
 
--- | Given the initial list of coordinates, compute the closest(s) color at
--- each location in the net.
-fill :: [Brush] -> Net
-fill xs = fill' (blank $ limit $ map position xs) 0 [] xs
-
--- | Flood fill starting from the initial list of coordinates keeping track of
--- the current distance.
+-- | Flood fill starting from an initial list of color coordinates.
+--
+-- Keep track of the distance of flooding from the color start point, so that
+-- we stop flooding once we reach a location that is colored with a color that
+-- is closest. Thus, the flooding process is BFS in the sense that each step
+-- flood each color for a given distance.
+--
+-- The `out` expression is True when flooding should ignore the given point in
+-- the net and stop flooding, False otherwise.
+--
 -- see https://en.wikipedia.org/wiki/Flood_fill
-fill' :: Net -> Distance -> [Brush] -> [Brush] -> Net
-fill' net _ [] [] = net
-fill' net d ns [] = fill' net (d + 1) [] ns
-fill' net d ns (Brush (x, y) c : bs) =
+fill :: Net -> (Point -> Bool) -> Distance -> [Brush] -> [Brush] -> Net
+fill net _ _ [] [] = net
+fill net out d ns [] = fill net out (d + 1) [] ns
+fill net out d ns (Brush (x, y) c : bs) =
     case locate net (x, y) of
-      Nothing                            -> if out then ignore else paint
+      Nothing | out (x, y)               -> ignore
+      Nothing                            -> paint
       Just (Location d' _) | d < d'      -> paint
       Just (Location d' _) | d > d'      -> ignore
       Just (Location _ cs) | c `elem` cs -> ignore
       Just (Location _ cs)               -> tie (c : cs)
-    where out = x < 0 || x > width net || y < 0 || y > height net
-          ignore = fill' net d ns bs
-          paint  = fill' (update net (x, y) (Location d [c])) d flood bs
-          tie cs = fill' (update net (x, y) (Location d cs))  d flood bs
+    where ignore = fill net out d ns bs
+          paint  = fill (update net (x, y) (Location d [c])) out d flood bs
+          tie cs = fill (update net (x, y) (Location d cs))  out d flood bs
           flood  = north c : east c : south c : west c : ns
               where north  = Brush (x, y - 1)
                     east   = Brush (x + 1, y)
                     south  = Brush (x, y + 1)
                     west   = Brush (x - 1, y)
 
--- | Display the size of the largest area that isn't infinite.
-answer :: Int -> IO ()
-answer = printf "the size of largest area that isn't infinite is %d.\n"
+-- | The net having an area per given coordinate containing all the locations
+-- that are the closest.
+--
+-- Create a Brush assigning a color per point in the listed coordinates and
+-- flood-fill a blank net with them.
+closest :: [Point] -> Net
+closest xs = fill (blank (w, h)) out 0 [] bs
+    where (w, h) = limit xs
+          out (x, y) = x < 0 || x > w || y < 0 || y > h
+          bs = zipWith Brush xs [0..]
 
--- | Compute and display the size of the largest area that isn't infinite.
+-- | The net with a single area containing all locations having a total
+-- distance to the given coordinates less than the given maximum distance.
+--
+-- Create a single Brush starting from the centroid point (with respect to the
+-- listed coordinates) and flood-fill a blank net with it. Any location that is
+-- too far is considered out.
+central :: Distance -> [Point] -> Net
+central d xs = fill (blank (w, h)) (\p -> out p || unsafe p) 0 [] [center]
+    where (w, h) = limit xs
+          out (x, y) = x < 0 || x > w || y < 0 || y > h
+          unsafe (x, y) = sum (map (distance (x, y)) xs) >= d
+          center = Brush (centroid xs) 0
+
+-- | Display the size of the largest area that isn't infinite, and the count of
+-- locations having a total distance to all the listed coordinates less than
+-- the limit.
+answer :: Int -> Int -> Distance -> IO ()
+answer u s d = do
+    printf "The size of largest area that isn't infinite is %d,\n" u
+    printf "and there are %d locations which have a total distance " s
+    printf "to all given coordinates of less than %d.\n" d
+
+-- | Compute and display the size of the largest area that isn't infinite, and
+-- the count of locations having a total distance to all the listed coordinates
+-- less than the limit.
 main :: IO ()
 main = do
     input <- getContents
-    case parse brushes "" input of
+    case parse points "" input of
       Left err -> error (show err)
-      Right xs ->
-          answer $ maximum $ mapMaybe size $ Map.elems $ areas (fill xs)
+      Right xs -> answer (largest dangerous) (largest safe) lim
+          where largest   = maximum . mapMaybe size . Map.elems . areas
+                dangerous = closest xs
+                safe      = central lim xs
+                lim       = 10000
 
 -- | Parse a coordinate.
 --
@@ -158,12 +236,9 @@ point = do
     spaces
     return (read x, read y)
 
--- | Parse a sequence of coordinate and assign them colors (in order).
+-- | Parse a sequence of coordinate.
 --
--- >>> parse brushes "" "1, 1\n1, 6"
--- Right [Brush (1,1) 0,Brush (1,6) 1]
-brushes :: Parser [Brush]
-brushes = do
-    pts <- sepBy1 point spaces
-    eof
-    return $ zipWith Brush pts [0..]
+-- >>> parse points "" "1, 1\n1, 6"
+-- Right [(1,1),(1,6)]
+points :: Parser [Point]
+points = sepBy1 point spaces <* eof
