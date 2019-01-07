@@ -1,6 +1,7 @@
 module Main (main) where
 
-import Data.Set hiding (foldl)
+import Data.Set
+import qualified Data.List as List
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 
@@ -35,7 +36,7 @@ initialFreq = 0
 -- >>> calibrate 0 [-1, -2, -3]
 -- -6
 calibrate :: Freq -> [Drift] -> Freq
-calibrate = foldl adjust
+calibrate = List.foldl' adjust
 
 -- | The first device's frequency reached twice given the initial frequency and
 -- a sequence of changes to cycle through.
