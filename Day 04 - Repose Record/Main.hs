@@ -200,7 +200,7 @@ record = do
 -- | Parse a sequence of Record and reorder them in a chronological order.
 records :: Parser [Record]
 records = do
-    xs <- sepBy1 record spaces
+    xs <- many1 record
     eof
     return $ sortBy (comparing timing) xs
 

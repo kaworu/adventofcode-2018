@@ -87,4 +87,4 @@ claim = do
 -- >>> parse claims "" "#1 @ 1,3: 4x4 #2 @ 3,1: 4x4 #3 @ 5,5: 2x2"
 -- Right [Claim {ident = 1, tl = (1,3), br = (4,6)},Claim {ident = 2, tl = (3,1), br = (6,4)},Claim {ident = 3, tl = (5,5), br = (6,6)}]
 claims :: Parser [Claim]
-claims = sepBy1 claim spaces <* eof
+claims = many1 claim <* eof

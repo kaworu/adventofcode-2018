@@ -241,4 +241,4 @@ point = do
 -- >>> parse points "" "1, 1\n1, 6"
 -- Right [(1,1),(1,6)]
 points :: Parser [Point]
-points = sepBy1 point spaces <* eof
+points = many1 point <* eof

@@ -115,4 +115,4 @@ boxId = do
 -- >>> parse boxIds "" "abcdef bababc abbcde"
 -- Right ["abcdef","bababc","abbcde"]
 boxIds :: Parser [BoxID]
-boxIds = sepBy1 boxId spaces <* eof
+boxIds = many1 boxId <* eof
