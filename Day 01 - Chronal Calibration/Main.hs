@@ -1,7 +1,7 @@
 module Main (main) where
 
-import Data.Set
-import qualified Data.List as List
+import Data.List
+import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 
@@ -36,7 +36,7 @@ initialFreq = 0
 -- >>> calibrate 0 [-1, -2, -3]
 -- -6
 calibrate :: Freq -> [Drift] -> Freq
-calibrate = List.foldl' adjust
+calibrate = foldl' adjust
 
 -- | The first device's frequency reached twice given the initial frequency and
 -- a sequence of changes to cycle through.
@@ -52,11 +52,11 @@ calibrate = List.foldl' adjust
 -- >>> calibrate' 0 [7, 7, -2, -7, -4]
 -- 14
 calibrate' :: Freq -> [Drift] -> Freq
-calibrate' f ds = dup empty freqs
+calibrate' f ds = dup Set.empty freqs
     where freqs = scanl adjust f $ cycle ds
           dup s (x : xs)
-              | x `member` s = x
-              | otherwise    = dup (x `insert` s) xs
+              | Set.member x s = x
+              | otherwise      = dup (Set.insert x s) xs
           dup _ [] = error "dup: empty list"
 
 -- | Display the answers given the resulting frequency and the first frequency
