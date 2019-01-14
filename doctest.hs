@@ -10,3 +10,4 @@ main = do
     doctest ["Day 04 - Repose Record/Main.hs"]
     doctest ["Day 05 - Alchemical Reduction/Main.hs"]
     doctest ["Day 06 - Chronal Coordinates/Main.hs"]
+    doctest ["Day 07 - The Sum of Its Parts/Main.hs"]
