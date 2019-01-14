@@ -17,9 +17,9 @@ zero = (0, 0)
 
 -- | The vector addition of two points.
 --
--- >>> add (-1, 2) (3, -6)
+-- >>> (-1, 2) `add` (3, -6)
 -- (2,-4)
--- >>> add (1, 6) (8, 3)
+-- >>> (1, 6) `add` (8, 3)
 -- (9,9)
 add :: Point -> Point -> Point
 add (x0, y0) (x1, y1) = (x0 + x1, y0 + y1)
