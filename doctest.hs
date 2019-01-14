@@ -11,3 +11,4 @@ main = do
     doctest ["Day 05 - Alchemical Reduction/Main.hs"]
     doctest ["Day 06 - Chronal Coordinates/Main.hs"]
     doctest ["Day 07 - The Sum of Its Parts/Main.hs"]
+    doctest ["Day 08 - Memory Maneuver/Main.hs"]
