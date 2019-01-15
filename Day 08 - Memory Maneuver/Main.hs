@@ -11,24 +11,36 @@ data Node = Node [Node] [Int]
 --
 -- >>> checksum $ Node [] []
 -- 0
--- >>> checksum $ Node [Node [] [1], Node [] [2], Node [] [3]] [4]
--- 10
--- >>> checksum $ Node [Node [Node [Node [] [5]] [6]] [7]] [8]
--- 26
+-- checksum $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
+-- 138
 checksum :: Node -> Int
 checksum (Node cs ms) = sum ms + sum (map checksum cs)
 
--- | Display the sum of all metadata entries.
-answer :: Int -> IO ()
-answer = printf "The sum of all metadata entries is %d.\n"
+-- | The value of a Node.
+--
+-- >>> value $ Node [] []
+-- 0
+-- value $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
+-- 66
+value :: Node -> Int
+value (Node [] ms) = sum ms
+value (Node cs ms) = sum $ map (value . (cs!!) . pred) $ filter refer ms
+    where refer i = i > 0 && i <= length cs
 
--- | Compute and display the sum of all metadata entries.
+-- | Display the sum of all metadata entries and the value of the root node.
+answer :: Int -> Int -> IO ()
+answer s v = do
+    printf "The sum of all metadata entries is %d," s
+    printf " and the value of the root node is %d.\n" v
+
+-- | Compute and display the sum of all metadata entries and the value of the
+-- root node.
 main :: IO ()
 main = do
     input <- getContents
     case parse tree "" input of
       Left err -> error (show err)
-      Right t -> answer (checksum t)
+      Right t -> answer (checksum t) (value t)
 
 -- | Parse a positive integer.
 --
