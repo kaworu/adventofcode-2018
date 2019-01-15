@@ -11,7 +11,7 @@ data Node = Node [Node] [Int]
 --
 -- >>> checksum $ Node [] []
 -- 0
--- checksum $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
+-- >>> checksum $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
 -- 138
 checksum :: Node -> Int
 checksum (Node cs ms) = sum ms + sum (map checksum cs)
@@ -20,7 +20,7 @@ checksum (Node cs ms) = sum ms + sum (map checksum cs)
 --
 -- >>> value $ Node [] []
 -- 0
--- value $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
+-- >>> value $ Node [Node [] [10,11,12],Node [Node [] [99]] [2]] [1,1,2]
 -- 66
 value :: Node -> Int
 value (Node [] ms) = sum ms
