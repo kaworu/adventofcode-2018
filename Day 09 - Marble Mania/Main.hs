@@ -108,18 +108,18 @@ next p scores
 -- | The winning score after p players took turns in a game that ends after the
 -- mth Marble.
 --
--- >>> winner 10 1618
+-- >>> winning 10 1618
 -- 8317
--- >>> winner 13 7999
+-- >>> winning 13 7999
 -- 146373
--- >>> winner 17 1104
+-- >>> winning 17 1104
 -- 2764
--- >>> winner 21 6111
+-- >>> winning 21 6111
 -- 54718
--- >>> winner 30 5807
+-- >>> winning 30 5807
 -- 37305
-winner :: Player -> Marble -> Score
-winner p m = maximum scores
+winning :: Player -> Marble -> Score
+winning p m = maximum scores
     where scores = play [1..m] 1 (reset p) (Ring [] 0 [])
 
 -- | The scores once all the marbles are placed.
@@ -133,17 +133,22 @@ play (m : ms) p scores xs
         scored = Map.adjust (\s -> s + m + taken) p scores
         placed = place ClockWise m $ rotate ClockWise 1 xs
 
--- | Display the winning Elf's score.
-answer :: Score -> IO ()
-answer = printf "The winning Elf's score is %d.\n"
+-- | Display the winning Elf's score after last marble worth, and the winning
+-- Elf's score if the number of the last marble were 100 times larger.
+answer :: Score -> Score -> IO ()
+answer s s100 = do
+    printf "The winning Elf's score is %d," s
+    printf " and the winning Elf's score if the number of the last marble were 100 times larger is %d.\n" s100
 
--- | Simulate the game and display the winning Elf's score.
+-- | Simulate the game and display the winning scores.
 main :: IO ()
 main = do
     input <- getContents
     case parse settings "" input of
       Left err     -> error (show err)
-      Right (p, m) -> answer $ winner p m
+      Right (p, m) -> answer s s100
+          where s    = winning p m
+                s100 = winning p (m * 100)
 
 -- | Parse the game settings, i.e. the player count and last marble's worth.
 --
