@@ -78,23 +78,28 @@ appeared :: Sky -> Bool
 appeared k = all hasNeighbour (Map.keys k)
     where hasNeighbour p = any (`Map.member` k) (neighbours p)
 
--- | The sky once the message has appeared.
-wait :: Sky -> Sky
-wait k
-  | appeared k = k
-  | otherwise = wait (next k)
+-- | The sky once the message has appeared along with the count of second to
+-- wait.
+wait :: Sky -> Int -> (Sky, Int)
+wait k n
+  | appeared k = (k, n)
+  | otherwise = wait (next k) (n + 1)
 
--- | Display the North Pole rescue operation's message.
-answer :: Sky -> IO ()
-answer = printf "%s\n" . look
+-- | Display the North Pole rescue operation's message along with the count of
+-- seconds to wait until the message appear.
+answer :: Sky -> Int -> IO ()
+answer k n = do
+    printf "After %d seconds:\n" n
+    printf "%s\n" (look k)
 
--- | calculate and display the North Pole rescue operation's message.
+-- | Calculate and display the North Pole rescue operation's message along with
+-- the count of seconds to wait until the message appear.
 main :: IO ()
 main = do
     input <- getContents
     case parse sky "" input of
-      Left err  -> error (show err)
-      Right k   -> answer (wait k)
+      Left err -> error (show err)
+      Right k  -> let (k', n) = wait k 0 in answer k' n
 
 -- | Parse a negative or positive number.
 --
