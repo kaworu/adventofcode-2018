@@ -3,8 +3,9 @@ module Main (main) where
 import Data.Char
 import Data.List
 import Data.Ord
-import qualified Data.Set as Set
+import Data.Set (Set)
 import Text.Printf (printf)
+import qualified Data.Set as Set
 
 -- | Small units forming a Polymer.
 type Unit = Char
@@ -64,7 +65,7 @@ trigger x y = x == opposite y
 --
 -- >>> units "dabAcCaCBAcCcaDA"
 -- fromList "abcd"
-units :: Polymer -> Set.Set Unit
+units :: Polymer -> Set Unit
 units = foldr (Set.insert . normal) Set.empty
 
 -- | The Polymer excluding the units of the same type as the given Unit.

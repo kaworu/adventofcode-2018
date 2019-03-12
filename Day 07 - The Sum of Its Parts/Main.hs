@@ -2,17 +2,18 @@ module Main (main) where
 
 import Data.Char
 import Data.List
+import Data.Map.Strict (Map)
 import Data.Maybe
-import qualified Data.Map.Strict as Map
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
 -- | A step from the Sleigh kit assembly instructions.
 type Step = Char
 
 -- | The Sleigh kit assembly instructions. Keys are the steps and values the
 -- step(s) they depend on.
-type Instructions = Map.Map Step [Step]
+type Instructions = Map Step [Step]
 
 -- | The steps having no dependency from the given instructions, in
 -- alphabetical order.

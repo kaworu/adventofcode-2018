@@ -1,12 +1,13 @@
 module Main (main) where
 
 import Data.Char
-import Data.Maybe
 import Data.Function
 import Data.List
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+import Data.Maybe
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
 -- | A coordinate from the network's grid.
 type Point = (Int, Int)
@@ -106,7 +107,7 @@ data Location = Location Distance [Color]
     deriving (Show)
 
 -- | The location network is defined by its width, height, and its grid.
-data Net = Net Int Int (Map.Map Point Location)
+data Net = Net Int Int (Map Point Location)
 
 -- | Show a network kind of like the README present it.
 -- We use comma (,) for unknown location instead of dot (.) because dot mean
@@ -134,7 +135,7 @@ update :: Net -> Point -> Location -> Net
 update (Net w h g) (x, y) l = Net w h $ Map.insert (x, y) l g
 
 -- | Compute each network's color area size (both finite and infinite).
-areas :: Net -> Map.Map Color Area
+areas :: Net -> Map Color Area
 areas (Net w h g) = Map.foldrWithKey mark Map.empty g
     where mark (x, y) (Location _ [c]) acc
             | border (x, y) = Map.insert c Infinite acc
@@ -150,9 +151,9 @@ data Brush = Brush { position :: Point, color :: Color }
 -- | Flood fill starting from an initial list of color coordinates.
 --
 -- Keep track of the distance of flooding from the color start point, so that
--- we stop flooding once we reach a location that is colored with a color that
--- is closest. Thus, the flooding process is BFS in the sense that each step
--- flood each color for a given distance.
+-- we stop flooding once we reach a location that is colored with another color
+-- that is closest. Thus, the flooding process is BFS in the sense that each
+-- step flood each color for a given distance.
 --
 -- The `out` expression is True when flooding should ignore the given point in
 -- the net and stop flooding, False otherwise.

@@ -1,8 +1,9 @@
 module Main (main) where
 
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
 -- | A marble number.
 type Marble = Int
@@ -92,7 +93,7 @@ type Player = Int
 type Score = Int
 
 -- | The score for each Player.
-type Scores = Map.Map Player Score
+type Scores = Map Player Score
 
 -- | Reset scores for a given number of players.
 reset :: Player -> Scores

@@ -1,9 +1,10 @@
 module Main (main) where
 
 import Data.List
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
 -- | A coordinate of a star in the sky.
 type Point = (Int, Int)
@@ -16,7 +17,7 @@ data Star = Star { position :: Point, speed :: Velocity }
     deriving (Show)
 
 -- | All the stars.
-type Sky = Map.Map Point [Star]
+type Sky = Map Point [Star]
 
 -- | All the points around the given point.
 --

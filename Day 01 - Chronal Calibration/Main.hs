@@ -1,9 +1,9 @@
 module Main (main) where
 
 import Data.List
-import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Set as Set
 
 -- | Device's frequency.
 type Freq = Int

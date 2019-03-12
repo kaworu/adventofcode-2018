@@ -1,15 +1,16 @@
 module Main (main) where
 
 import Data.List
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
 -- | A coordinate in the whole piece of fabric.
 type Point = (Int, Int)
 
 -- | The piece of fabric, mapping Point to Claim id sequence.
-type Fabric = Map.Map Point [Int]
+type Fabric = Map Point [Int]
 
 -- | An area of fabric claimed by an Elf.
 data Claim = Claim { ident :: Int, tl, br :: Point }
