@@ -1,10 +1,16 @@
 module Main (main) where
 
 import Data.List
-import Data.Ord
-import qualified Data.Map.Strict as Map
+import Data.Map (Map, (!))
+import Data.Ord (comparing)
+import Data.Set (Set)
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+
+-- | A grid serial number.
+type SerialNumber = Int
 
 -- | A coordinate in the fuel cell grid.
 type Point = (Int, Int)
@@ -13,10 +19,12 @@ type Point = (Int, Int)
 type Power = Int
 
 -- | Grid of fuel cells.
-type Grid = Map.Map Point Power
+data Grid = Grid { limit :: Int, cells, sat :: Map Point Power }
+    deriving (Show)
 
--- | A grid serial number.
-type SerialNumber = Int
+-- | A square in the grid and the sum of its cells power.
+data Square = Square { size :: Int, tl :: Point, power :: Power }
+    deriving (Show)
 
 -- | The rack ID of fuel cell at the given coordinate.
 rackid :: Point -> Int
@@ -38,72 +46,104 @@ hdigit x = (x `div` 100) `mod` 10
 -- | The power level of a fuel cell given its grid serial number and
 -- coordinate.
 --
--- >>> power 8 (3, 5)
+-- >>> measure 8 (3, 5)
 -- 4
--- >>> power 57 (122, 79)
+-- >>> measure 57 (122, 79)
 -- -5
--- >>> power 39 (217, 196)
+-- >>> measure 39 (217, 196)
 -- 0
--- >>> power 71 (101, 153)
+-- >>> measure 71 (101, 153)
 -- 4
-power :: SerialNumber -> Point -> Power
-power sn (x, y) = hdigit ((rid * y + sn) * rid) - 5
+measure :: SerialNumber -> Point -> Power
+measure sn (x, y) = hdigit ((rid * y + sn) * rid) - 5
     where rid = rackid (x, y)
 
--- | The 300x300 fuel cell grid given its serial number.
-grid :: SerialNumber -> Grid
-grid sn = Map.fromList cells
-    where cells = [((x, y), p) | x <- xs, y <- ys, let p = power sn (x, y)]
-          (xs, ys) = ([1..300], [1..300])
-
--- | The (top-left, bottom-right) coordinates of the grid.
-limits :: Grid -> (Point, Point)
-limits g = ((minimum xs, minimum ys), (maximum xs, maximum ys))
-    where xs = map fst pts
-          ys = map snd pts
-          pts = Map.keys g
-
--- | The top-left corner coordinate of all the 3x3 squares in the grid.
-corners :: Grid -> [Point]
-corners g = [(x, y) | x <- [cxmin..cxmax], y <- [cymin..cymax]]
-    where (cxmin, cymin, cxmax, cymax) = (xmin, ymin, xmax - 2, ymax - 2)
-          ((xmin, ymin), (xmax, ymax)) = limits g
-
--- | The 3x3 squares in the grid.
-squares :: Grid -> [[Point]]
-squares g = map extend (corners g)
-    where extend (cx, cy) = [(x, y) | x <- [cx .. cx + 2], y <- [cy .. cy + 2]]
-
--- | The coordinate and power of the top-left fuel cell of the all 3x3 squares
--- in the grid.
-reduce :: Grid -> [(Point, Power)]
-reduce g = map f (squares g)
-    where f xs = (head xs, sum $ map (g Map.!) xs)
-
--- | The coordinate and power of the top-left fuel cell of the 3x3 square with
--- the largest total power.
+-- | The points of a nxn grid, 1-indexed.
 --
--- >>> largest (grid 18)
--- ((33,45),29)
--- >>> largest (grid 42)
--- ((21,61),30)
-largest :: Grid -> (Point, Power)
-largest = maximumBy (comparing snd) . reduce
+-- >>> points 3
+-- fromList [(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3)]
+points :: Int -> Set Point
+points n = Set.fromList [(x, y) | x <- [1..n], y <- [1..n]]
+
+-- | The Summed-area table value at (x, y). The function f map keys to values
+-- from the grid, and f' map keys to values from the Summed-area table.
+compute :: (Point -> Power) -> (Point -> Power) -> Point -> Power
+compute f f' (x, y) = f (x1, y1) + f' (x1, y0) + f' (x0, y1) - f' (x0, y0)
+    where (x0, y0) = (x - 1, y - 1)
+          (x1, y1) = (x, y)
+
+-- | The value at the given key in the map or zero.
+--
+-- >>> Map.fromList [('a', 1), ('b', 2)] ⦶ 'a'
+-- 1
+-- >>> Map.fromList [('a', 1), ('b', 2)] ⦶ 'b'
+-- 2
+-- >>> Map.fromList [('a', 1), ('b', 2)] ⦶ 'c'
+-- 0
+(⦶) :: (Ord k, Num a) => Map k a -> k -> a
+(⦶) = flip (Map.findWithDefault 0)
+
+-- | The Summed-area table of the given cells.
+--
+-- NOTE: the cell processing order is important and must be done from the
+-- top-left to the bottom-right, hence foldl.
+--
+-- see https://en.wikipedia.org/wiki/Summed-area_table
+img :: Map Point Power -> Map Point Power
+img xs = foldl ins Map.empty (Map.keys xs)
+    where ins tbl p = Map.insert p (compute (xs !) (tbl ⦶) p) tbl
+
+-- | The nxn grid given its serial number.
+grid :: Int -> SerialNumber -> Grid
+grid n sn = Grid { limit = n, cells = xs, sat = img xs }
+    where xs = Map.fromSet (measure sn) (points n)
+
+-- | The square of size i having the top-left corner at (x, y) in the grid.
+square :: Grid -> Int -> Point -> Square
+square g i (x, y) = Square { size = i, tl = (x, y), power = area }
+    where area = f' (x1, y1) + f' (x0, y0) - f' (x1, y0) - f' (x0, y1)
+          (x0, y0) = (x - 1, y - 1)
+          (x1, y1) = (x0 + i, y0 + i)
+          f' p = sat g ⦶ p
+
+-- | All the squares of size i from the grid.
+gen :: Int -> Grid -> [Square]
+gen i g = [square g i (x, y) | x <- [1..n], y <- [1..n]]
+    where n = limit g - i + 1
+
+-- | All the grid's squares.
+squares :: Grid -> [Square]
+squares g = concat [gen i g | i <- [1..limit g]]
+
+-- | The square with the largest power.
+--
+-- >>> mightiest $ gen 3 (grid 300 18)
+-- Square {size = 3, tl = (33,45), power = 29}
+-- >>> mightiest $ gen 3 (grid 300 42)
+-- Square {size = 3, tl = (21,61), power = 30}
+mightiest :: [Square] -> Square
+mightiest = maximumBy (comparing power)
 
 -- | Display the coordinate of the top-left fuel cell of the 3x3 square with
--- the largest total power.
-answer :: Point -> IO ()
-answer (x, y) = printf fmt x y
-    where fmt = "The coordinate of the top-left fuel cell of the 3x3 square with the largest total power is %d,%d.\n"
+-- the largest total power, and the X,Y,size of the square of any size with the
+-- largest total power.
+answer :: Square -> Square -> IO ()
+answer s3 s = do
+    printf "The coordinate of the top-left fuel cell of the 3x3 square with the largest total power is %d,%d,\n" s3tlx s3tly
+    printf "and the X,Y,size of the square of any size with the largest total power is %d,%d,%d.\n" stlx stly (size s)
+        where (s3tlx, s3tly) = tl s3
+              (stlx, stly)   = tl s
 
 -- | Compute and display the coordinate of the top-left fuel cell of the 3x3
--- square with the largest total power.
+-- square with the largest total power, and the X,Y,size of the square of any
+-- size with the largest total power.
 main :: IO ()
 main = do
     input <- getContents
     case parse gsn "" input of
       Left err -> error (show err)
-      Right n  -> answer $ fst $ largest $ grid n
+      Right sn -> answer (mightiest $ gen 3 g) (mightiest $ squares g)
+          where g = grid 300 sn
 
 -- | Parse the grid serial number.
 --
