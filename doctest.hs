@@ -15,3 +15,4 @@ main = do
     doctest ["Day 09 - Marble Mania/Main.hs"]
     doctest ["Day 10 - The Stars Align/Main.hs"]
     doctest ["Day 11 - Chronal Charge/Main.hs"]
+    doctest ["Day 12 - Subterranean Sustainability/Main.hs"]

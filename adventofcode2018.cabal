@@ -114,3 +114,12 @@ executable Day11
                        containers
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable Day12
+  hs-source-dirs:      "Day 12 - Subterranean Sustainability"
+  main-is:             Main.hs
+  build-depends:       base   >=4.12 && <4.13,
+                       parsec >=3.1 && <3.2,
+                       containers
+  default-language:    Haskell2010
+  ghc-options:         -Wall
