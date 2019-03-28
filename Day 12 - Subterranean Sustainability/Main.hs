@@ -39,9 +39,9 @@ instance Show Pattern where
 
 -- | The given pots without the leading Empty ones.
 --
--- >>> lstrip [Empty, Pot, Empty]
+-- >>> lstrip [Empty, Plant, Empty]
 -- [#,.]
--- >>> lstrip [Pot, Empty, Empty]
+-- >>> lstrip [Plant, Empty, Empty]
 -- [#,.,.]
 -- >>> lstrip [Empty, Empty, Empty]
 -- []
@@ -53,9 +53,9 @@ lstrip xs = xs
 
 -- | The given pots without the trailing Empty ones.
 --
--- >>> rstrip [Empty, Pot, Empty]
+-- >>> rstrip [Empty, Plant, Empty]
 -- [.,#]
--- >>> rstrip [Pot, Empty, Empty]
+-- >>> rstrip [Plant, Empty, Empty]
 -- [#]
 -- >>> rstrip [Empty, Empty, Empty]
 -- []
