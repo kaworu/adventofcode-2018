@@ -123,3 +123,12 @@ executable Day12
                        containers
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable Day13
+  hs-source-dirs:      "Day 13 - Mine Cart Madness"
+  main-is:             Main.hs
+  build-depends:       base   >=4.12 && <4.13,
+                       parsec >=3.1 && <3.2,
+                       containers
+  default-language:    Haskell2010
+  ghc-options:         -Wall
