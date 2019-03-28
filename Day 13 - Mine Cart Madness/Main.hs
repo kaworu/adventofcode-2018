@@ -14,6 +14,7 @@ type Point = (Int, Int)
 
 -- | A cart direction in the crop.
 data Direction = North | East | South | West
+    deriving (Eq)
 
 -- | A track on which carts may drive.
 data Track = Pipe | Dash | Slash | BackSlash | Cross
@@ -23,11 +24,11 @@ type Tracks = Map Point Track
 
 -- | The options that a cart has to turn, in order.
 data Turning = Leftwise | Straight | Rightwise
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- | A cart in the crop.
 data Cart = Cart { pos :: Point, facing :: Direction, turning :: Turning }
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- | Display a cart direction in the same fashion as it is done in the README.
 instance Show Direction where
@@ -43,6 +44,15 @@ instance Show Track where
     show Slash     = "/"
     show BackSlash = "\\"
     show Cross     = "+"
+
+-- | True if the two given carts have the same position, False otherwise.
+samePos :: Cart -> Cart -> Bool
+samePos c w = pos c == pos w
+
+-- | Just the first cart in from the list having crashed with the given cart,
+-- or Nothing.
+crash :: Cart -> [Cart] -> Maybe Cart
+crash c = find (samePos c)
 
 -- | The cart's direction at a given track.
 heading :: Track -> Turning -> Direction -> Direction
@@ -88,36 +98,39 @@ step ts (Cart p d u) = Cart p' d' u'
           u' = swing t u
           t  = ts ! p
 
--- | True if the given cart has crashed with any other cart from the given
--- list, False otherwise.
-crashed :: Cart -> [Cart] -> Bool
-crashed c = any (samePos c)
-    where samePos x y = pos x == pos y
+-- | Tick until all crash happened.
+tick' :: Tracks -> [Point] -> [Cart] -> [Cart] -> ([Point], Maybe Point)
+tick' _ crashed []  [] = (reverse crashed, Nothing)
+tick' _ crashed [c] [] = (reverse crashed, Just $ pos c)
+tick' ts crashed moved [] = tick' ts crashed [] $ sortBy (comparing pos) moved
+tick' ts crashed moved (c : cs) =
+    let c' = step ts c
+     in case crash c' (moved ++ cs) of
+          Nothing -> tick' ts crashed (c' : moved) cs
+          Just w  -> tick' ts (pos c' : crashed) (delete w moved) (delete w cs)
 
--- | Tick until a crash occur.
-tick :: Tracks -> [Cart] -> [Cart] -> Point
-tick ts acc [] = tick ts [] $ sortBy (comparing pos) acc
-tick ts acc (c : cs)
-  | c' `crashed` (acc ++ cs) = pos c'
-  | otherwise = tick ts (c' : acc) cs
-  where c' = step ts c
+-- | Tick until all crash happened.
+drive :: Tracks -> [Cart] -> ([Point], Maybe Point)
+drive ts cs = tick' ts [] cs []
 
--- | The point where the first crash arise.
-crash :: Tracks -> [Cart] -> Point
-crash ts cs = tick ts cs []
+-- | Display the location of the first crash and the last car's location.
+answer :: Point -> Maybe Point -> IO()
+answer (x, y) (Just (x', y')) = do
+    printf "The location of the first crash is %d,%d,\n" x y
+    printf "and the location of the last cart is %d,%d.\n" x' y'
+answer (x, y) Nothing = do
+    printf "The location of the first crash is %d,%d,\n" x y
+    printf "and there is no last cart.\n"
 
--- | Display the location of the first crash.
-answer :: Point -> IO()
-answer (x, y) =
-    printf "The location of the first crash is %d,%d.\n" x y
-
--- | Compute and display the location of the first crash.
+-- | Compute and display the location of the first crash and the last car's
+-- location.
 main :: IO ()
 main = do
     input <- getContents
     case parse cartsAndTracks "" input of
       Left err -> error (show err)
-      Right (cs, ts) -> answer (crash ts cs)
+      Right (cs, ts) -> answer (head crashed) m
+          where (crashed, m) = drive ts cs
 
 -- | Parse a point from the crop.
 track :: Parser (Maybe (Either Track Direction))
