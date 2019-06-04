@@ -141,7 +141,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse gsn "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right sn -> answer (mightiest $ gen 3 g) (mightiest $ squares g)
           where g = grid 300 sn
 

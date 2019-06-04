@@ -219,7 +219,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse points "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right xs -> answer (largest dangerous) (largest safe) lim
           where largest   = maximum . mapMaybe size . Map.elems . areas
                 dangerous = closest xs

@@ -123,7 +123,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse garden "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right g0 -> answer g20 g50b
           where g20  = grow 20 g0
                 g50b = grow (50000000000 - 20) g20

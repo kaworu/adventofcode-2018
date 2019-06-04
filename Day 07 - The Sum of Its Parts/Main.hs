@@ -188,7 +188,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse instructions "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right xs -> answer (order alone) (elapsed helped + 1)
           where order = map fst . schedule 0 xs
                 elapsed = maximum . map snd . schedule 0 xs

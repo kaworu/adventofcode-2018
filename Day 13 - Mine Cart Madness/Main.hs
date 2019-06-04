@@ -128,7 +128,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse cartsAndTracks "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right (cs, ts) -> answer (head crashed) m
           where (crashed, m) = drive ts cs
 

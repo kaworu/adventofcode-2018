@@ -39,7 +39,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse tree "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right t -> answer (checksum t) (value t)
 
 -- | Parse a positive integer.

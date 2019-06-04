@@ -95,7 +95,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse boxIds "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right xs -> answer (checksum xs) (common $ prototypes xs)
           where common Nothing       = Nothing
                 common (Just (a, b)) = Just (a `intersect` b)

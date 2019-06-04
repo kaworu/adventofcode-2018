@@ -146,7 +146,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse settings "" input of
-      Left err     -> error (show err)
+      Left err     -> fail (show err)
       Right (p, m) -> answer s s100
           where s    = winning p m
                 s100 = winning p (m * 100)

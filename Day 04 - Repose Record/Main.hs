@@ -129,9 +129,9 @@ main :: IO ()
 main = do
     input <- getContents
     case parse records "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right rs -> case parse naps "" rs of
-          Left err -> error (show err)
+          Left err -> fail (show err)
           Right ns -> let ss = stats ns in do
               answer 1 (maximumBy strategy1 ss)
               answer 2 (maximumBy strategy2 ss)

@@ -99,7 +99,7 @@ main :: IO ()
 main = do
     input <- getContents
     case parse sky "" input of
-      Left err -> error (show err)
+      Left err -> fail (show err)
       Right k  -> let (k', n) = wait k 0 in answer k' n
 
 -- | Parse a negative or positive number.
