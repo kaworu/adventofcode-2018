@@ -22,9 +22,9 @@ data Garden = Garden { num :: Int, pots :: [Pot], notes :: Notes }
 
 -- | Display a pot as in README.md
 --
--- >> show Empty
+-- >>> show Empty
 -- "."
--- >> show Plant
+-- >>> show Plant
 -- "#"
 instance Show Pot where
     show Empty = "."
@@ -32,7 +32,7 @@ instance Show Pot where
 
 -- | Display a note pattern as in README.md
 --
--- >> show $ Pattern Empty Pot Empty Pot Empty
+-- >>> show $ Pattern Empty Plant Empty Plant Empty
 -- ".#.#."
 instance Show Pattern where
     show (Pattern ll l c r rr) = concatMap show [ll, l, c, r, rr]
