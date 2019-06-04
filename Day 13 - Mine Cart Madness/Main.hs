@@ -18,6 +18,7 @@ data Direction = North | East | South | West
 
 -- | A track on which carts may drive.
 data Track = Pipe | Dash | Slash | BackSlash | Cross
+    deriving (Eq)
 
 -- | All the tracks in the crop.
 type Tracks = Map Point Track
@@ -46,11 +47,25 @@ instance Show Track where
     show Cross     = "+"
 
 -- | True if the two given carts have the same position, False otherwise.
+--
+-- >>> samePos (Cart (1, 0) North Leftwise) (Cart (0, 0) North Leftwise)
+-- False
+-- >>> samePos (Cart (0, 0) North Leftwise) (Cart (0, 1) North Leftwise)
+-- False
+-- >>> samePos (Cart (0, 0) East Straight) (Cart (0, 0) South Rightwise)
+-- True
 samePos :: Cart -> Cart -> Bool
 samePos c w = pos c == pos w
 
 -- | Just the first cart in from the list having crashed with the given cart,
 -- or Nothing.
+--
+-- >>> crash (Cart (0, 0) North Leftwise) $ []
+-- Nothing
+-- >>> crash (Cart (0, 0) North Leftwise) $ [Cart (0, -1) North Leftwise]
+-- Nothing
+-- >>> crash (Cart (0, 0) North Leftwise) $ [Cart (0, -1) North Leftwise, Cart (0, 0) South Straight]
+-- Just (Cart {pos = (0,0), facing = v, turning = Straight})
 crash :: Cart -> [Cart] -> Maybe Cart
 crash c = find (samePos c)
 
@@ -77,6 +92,15 @@ heading Cross Leftwise South = East
 heading Cross Leftwise East  = North
 
 -- | The next cart's position.
+--
+-- >>> move (0, 0) North
+-- (0,-1)
+-- >>> move (1, 1) South
+-- (1,2)
+-- >>> move (1, -1) West
+-- (0,-1)
+-- >>> move (41, 9001) East
+-- (42,9001)
 move :: Point -> Direction -> Point
 move (x, y) North = (x, y - 1)
 move (x, y) South = (x, y + 1)
