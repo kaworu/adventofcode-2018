@@ -138,7 +138,7 @@ drive :: Tracks -> [Cart] -> ([Point], Maybe Point)
 drive ts cs = tick' ts [] cs []
 
 -- | Display the location of the first crash and the last car's location.
-answer :: Point -> Maybe Point -> IO()
+answer :: Point -> Maybe Point -> IO ()
 answer (x, y) (Just (x', y')) = do
     printf "The location of the first crash is %d,%d,\n" x y
     printf "and the location of the last cart is %d,%d.\n" x' y'
