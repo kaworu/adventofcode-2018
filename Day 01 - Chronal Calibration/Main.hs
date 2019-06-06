@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Data.List
 import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 import qualified Data.Set as Set
@@ -11,53 +10,43 @@ type Freq = Int
 -- | A change in the device's frequency.
 type Drift = Int
 
--- | Adjust the device's frequency with a given change.
+-- | The frequency sequence starting from zero.
 --
--- >>> 0 `adjust` 6
--- 6
--- >>> 6 `adjust` (-1)
--- 5
-adjust :: Freq -> Drift -> Freq
-adjust = (+)
+-- >>> freqs [1, -2, 3, 1]
+-- [0,1,-1,2,3]
+freqs :: [Drift] -> [Freq]
+freqs = scanl (+) 0
 
--- | The device's initial frequency.
-initialFreq :: Freq
-initialFreq = 0
-
--- | The measured final device's frequency given the initial frequency and a
--- sequence of changes.
+-- | The resulting frequency after all of the changes in frequency have been
+-- applied.
 --
--- >>> calibrate 0 [1, -2, 3, 1]
+-- >>> final [1, -2, 3, 1]
 -- 3
--- >>> calibrate 0 [1, 1, 1]
+-- >>> final [1, 1, 1]
 -- 3
--- >>> calibrate 0 [1, 1, -2]
+-- >>> final [1, 1, -2]
 -- 0
--- >>> calibrate 0 [-1, -2, -3]
+-- >>> final [-1, -2, -3]
 -- -6
-calibrate :: Freq -> [Drift] -> Freq
-calibrate = foldl' adjust
+final :: [Drift] -> Freq
+final = last . freqs
 
--- | The first device's frequency reached twice given the initial frequency and
--- a sequence of changes to cycle through.
+-- | The first frequency reached twice.
 --
--- >>> calibrate' 0 [1, -2, 3, 1]
--- 2
--- >>> calibrate' 0 [1, -1]
+-- >>> dup [1, -1]
 -- 0
--- >>> calibrate' 0 [3, 3, 4, -2, -4]
+-- >>> dup [3, 3, 4, -2, -4]
 -- 10
--- >>> calibrate' 0 [-6, 3, 8, 5, -6]
+-- >>> dup [-6, 3, 8, 5, -6]
 -- 5
--- >>> calibrate' 0 [7, 7, -2, -7, -4]
+-- >>> dup [7, 7, -2, -7, -4]
 -- 14
-calibrate' :: Freq -> [Drift] -> Freq
-calibrate' f ds = dup Set.empty freqs
-    where freqs = scanl adjust f $ cycle ds
-          dup s (x : xs)
-              | Set.member x s = x
-              | otherwise      = dup (Set.insert x s) xs
-          dup _ [] = error "dup: empty list"
+dup :: [Drift] -> Freq
+dup = record Set.empty . freqs . cycle
+    where record bag inf
+            | x `Set.member` bag = x
+            | otherwise = record (x `Set.insert` bag) xs
+            where (x, xs) = (head inf, tail inf)
 
 -- | Display the answers given the resulting frequency and the first frequency
 -- reached twice.
@@ -73,8 +62,8 @@ main = do
     case parse drifts "" input of
       Left err -> fail (show err)
       Right xs -> answer calibrated calibrated'
-          where calibrated  = calibrate  initialFreq xs
-                calibrated' = calibrate' initialFreq xs
+          where calibrated  = final xs
+                calibrated' = dup xs
 
 -- | Parse a Drift value.
 --
