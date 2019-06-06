@@ -107,8 +107,7 @@ grow' i prev g@(Garden n ps m)
 
 -- | The sum of the number of all pots which contain a plant.
 plants :: Garden -> Int
-plants (Garden n ps _) = sum $ map snd $ filter planted $ zip ps [n..]
-    where planted (p, _) = p == Plant
+plants (Garden n ps _) = sum [ x | (Plant, x) <- zip ps [n..] ]
 
 -- | Display the sum of the numbers of all pots which contain a plant after 20
 -- generations.
