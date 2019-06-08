@@ -12,6 +12,29 @@ import qualified Data.Map.Strict as Map
 -- | A coordinate from the network's grid.
 type Point = (Int, Int)
 
+-- | Sized area of closest locations, either finite or infinite.
+data Area = Infinite | Finite Int
+    deriving (Show)
+
+-- | Manhattan distance from a Point relative to another.
+type Distance = Int
+
+-- | Identifier for the listed coordinates.
+type Color = Int
+
+-- | A location in the grid is defined by its distance with respect to it
+-- closest color(s). It is tied if it has more than one color. A listed
+-- coordinate's location has a distance of 0.
+data Location = Location Distance [Color]
+    deriving (Show)
+
+-- | The location network is defined by its width, height, and its grid.
+data Net = Net Int Int (Map Point Location)
+
+-- | A flood fill request to paint a color at a position.
+data Brush = Brush { position :: Point, color :: Color }
+    deriving (Show)
+
 -- | The grid's top-left corner.
 zero :: Point
 zero = (0, 0)
@@ -53,10 +76,6 @@ limit [] = zero
 limit xs = (max' fst, max' snd)
     where max' f = maximum $ map f xs
 
--- | Sized area of closest locations, either finite or infinite.
-data Area = Infinite | Finite Int
-    deriving (Show)
-
 -- | Just the area size if it is finite, Nothing otherwise.
 --
 -- >>> size Infinite
@@ -77,9 +96,6 @@ expand :: Area -> Area
 expand Infinite   = Infinite
 expand (Finite x) = Finite (x + 1)
 
--- | Manhattan distance from a Point relative to another.
-type Distance = Int
-
 -- | Manhattan's distance between two points.
 --
 -- >>> distance (4, 3) (1, 1)
@@ -96,18 +112,6 @@ type Distance = Int
 -- 10
 distance :: Point -> Point -> Distance
 distance (x0, y0) (x1, y1) = abs (x0 - x1) + abs (y0 - y1)
-
--- | Identifier for the listed coordinates.
-type Color = Int
-
--- | A location in the grid is defined by its distance with respect to it
--- closest color(s). It is tied if it has more than one color. A listed
--- coordinate's location has a distance of 0.
-data Location = Location Distance [Color]
-    deriving (Show)
-
--- | The location network is defined by its width, height, and its grid.
-data Net = Net Int Int (Map Point Location)
 
 -- | Show a network kind of like the README present it.
 -- We use comma (,) for unknown location instead of dot (.) because dot mean
@@ -143,10 +147,6 @@ areas (Net w h g) = Map.foldrWithKey mark Map.empty g
           mark _ _ acc = acc -- tied
           border (x, y) = x == 0 || x == w || y == 0 || y == h
           increase = Just . maybe (Finite 1) expand
-
--- | A flood fill request to paint a color at a position.
-data Brush = Brush { position :: Point, color :: Color }
-    deriving (Show)
 
 -- | Flood fill starting from an initial list of color coordinates.
 --

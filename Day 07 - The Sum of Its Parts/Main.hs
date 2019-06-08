@@ -15,6 +15,16 @@ type Step = Char
 -- step(s) they depend on.
 type Instructions = Map Step [Step]
 
+-- | Unit of time spent to perform a step from the instructions.
+type Second = Int
+
+-- | A person working on a step, i.e. you or an elf.
+--
+-- A worker is either idle (has no step to perform), working on a step until a
+-- given time, or has finished the step it was working at a given time.
+data Worker = Idle | Working Step Second | Worked Step Second
+    deriving (Show)
+
 -- | The steps having no dependency from the given instructions, in
 -- alphabetical order.
 --
@@ -54,9 +64,6 @@ candidates = Map.keys . Map.filter null
 finished :: Step -> Instructions -> Instructions
 finished x = Map.map (delete x) . Map.delete x
 
--- | Unit of time spent to perform a step from the instructions.
-type Second = Int
-
 -- | Count of seconds required to finish a given step.
 --
 -- >>> time 'A'
@@ -65,13 +72,6 @@ type Second = Int
 -- 86
 time :: Step -> Second
 time x = ord x - ord 'A' + 61
-
--- | A person working on a step, i.e. you or an elf.
---
--- A worker is either idle (has no step to perform), working on a step until a
--- given time, or has finished the step it was working at a given time.
-data Worker = Idle | Working Step Second | Worked Step Second
-    deriving (Show)
 
 -- | A given number of idle workers.
 --
