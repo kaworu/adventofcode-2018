@@ -172,4 +172,4 @@ garden :: Parser Garden
 garden = do
     st <- initialState
     xs <- many1 note
-    return $ Garden { num = 0, pots = st, notes = Map.fromList xs }
+    return Garden { num = 0, pots = st, notes = Map.fromList xs }

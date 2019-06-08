@@ -53,7 +53,7 @@ ultimate xs = length $ takeWhile (not . (xs `isPrefixOf`)) $ tails board
 -- the number of recipes after which the score pattern appears.
 answer :: String -> [Score] -> Int -> IO ()
 answer desc xs n = do
-    printf "the scores of the ten recipes immediately after %d recipes are %s,\n" (read desc :: Int) (concat $ map show xs)
+    printf "the scores of the ten recipes immediately after %d recipes are %s,\n" (read desc :: Int) (concatMap show xs)
     printf "and %s first appears after %d recipes.\n" desc n
 
 -- | Compute and display the 10 recipes immediately after a given number of
