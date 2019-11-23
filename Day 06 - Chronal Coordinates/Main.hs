@@ -9,7 +9,7 @@ import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 import qualified Data.Map.Strict as Map
 
--- | A coordinate from the network's grid.
+-- | A (x, y) coordinate from the network's grid.
 type Point = (Int, Int)
 
 -- | Sized area of closest locations, either finite or infinite.

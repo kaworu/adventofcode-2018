@@ -6,7 +6,7 @@ import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 import qualified Data.Map.Strict as Map
 
--- | A coordinate of a star in the sky.
+-- | A (x, y) coordinate of a star in the sky.
 type Point = (Int, Int)
 
 -- | The speed of a light floating in the distance.

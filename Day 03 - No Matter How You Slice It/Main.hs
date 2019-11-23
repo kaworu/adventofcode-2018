@@ -6,7 +6,7 @@ import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 import qualified Data.Map.Strict as Map
 
--- | A coordinate in the whole piece of fabric.
+-- | A (x, y) coordinate in the whole piece of fabric.
 type Point = (Int, Int)
 
 -- | The piece of fabric, mapping Point to Claim id sequence.

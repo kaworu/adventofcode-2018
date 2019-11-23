@@ -9,7 +9,7 @@ import Text.ParserCombinators.Parsec
 import Text.Printf (printf)
 import qualified Data.Map.Strict as Map
 
--- | A coordinate in the crop.
+-- | A (x, y) coordinate in the crop.
 type Point = (Int, Int)
 
 -- | A cart direction in the crop.
