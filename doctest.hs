@@ -18,3 +18,4 @@ main = do
     doctest ["Day 12 - Subterranean Sustainability/Main.hs"]
     doctest ["Day 13 - Mine Cart Madness/Main.hs"]
     doctest ["Day 14 - Chocolate Charts/Main.hs"]
+    doctest ["Day 15 - Beverage Bandits/Main.hs"]

@@ -141,3 +141,12 @@ executable Day14
                        containers
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable Day15
+  hs-source-dirs:      "Day 15 - Beverage Bandits"
+  main-is:             Main.hs
+  build-depends:       base,
+                       parsec,
+                       containers
+  default-language:    Haskell2010
+  ghc-options:         -Wall
