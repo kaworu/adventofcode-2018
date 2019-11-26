@@ -139,54 +139,62 @@ freeNeighbours cv = filter free . neighbours
 units :: Kind -> Cave -> Cave
 units kind = Map.filter (isOccupiedBy kind)
 
--- | the Cave ticked until the stop condition is met, along with the count of
--- full round taken.
+-- | the Cave ticked until the stop condition is met or the fight is over,
+-- along with the count of full round taken.
 combat :: (Cave -> Bool) -> Cave -> (Cave, Int)
 combat cond = combat' 0
     where combat' i cv
-            | cond cv   = (cv, i)
-            | otherwise = combat' (i + 1) (tick cv)
+            | cond cv   = (cv,  i)
+            | not full  = (cv', i) -- incomplete round
+            | otherwise = combat' (i + 1) cv'
+            where (cv', full) = tick cv
 
 -- | the Cave after a combat without mercy, along with the count of full round
 -- taken.
 combatUntilOneSideWin :: Cave -> (Cave, Int)
-combatUntilOneSideWin = combat ((==1) . Set.size . kindLeft)
+combatUntilOneSideWin = combat (const False)
 
--- | The list of Kind left in the Cave.
+-- | The Set of Kind left in the Cave.
 kindLeft :: Cave -> Set Kind
 kindLeft = Set.fromList . mapMaybe occupiedBy . Map.elems
     where occupiedBy (Occupied kind _) = Just kind
           occupiedBy _ = Nothing
 
 -- | The Cave after one round, i.e. once every unit has moved and attacked
--- (in reading order).
-tick :: Cave -> Cave
-tick cv = foldl advance cv everybody
-    where everybody = Map.keys $ Map.filter isOccupied cv
+-- (in reading order) along with True if this was a full round, False
+-- otherwise.
+tick :: Cave -> (Cave, Bool)
+tick initial = tick1 True initial everybody
+    where everybody = Map.keys $ Map.filter isOccupied initial
+          tick1 first cv []       = (cv, not first)
+          tick1 _     cv (x : xs) = next $ advance cv x
+              where next (_, Just False) = (cv, False)
+                    next (advanced, _)   = tick1 False advanced xs
 
--- | The Cave after the unit at the given Spot has taken one round of action.
-advance :: Cave -> Spot -> Cave
-advance cv spot =
-    case Map.lookup spot cv of
-      Just (Occupied kind _) -> moveThenAttack kind
-      _ -> cv -- no changes
-     where moveThenAttack kind = attack (enemy kind) destination afterMoving
-            where afterMoving = move spot destination cv
-                  destination = pathTo (enemy kind)
-                  pathTo target = path cv spot (spotsOfInterest target spot cv)
+-- | The Cave after the unit at the given Spot has taken one round of action,
+-- along with Just True if at least one enemy was spotted, Just False if no
+-- enemy was spotted, Nothing if there is no unit at the given Spot.
+advance :: Cave -> Spot -> (Cave, Maybe Bool)
+advance cv spot = advance' $ Map.lookup spot cv
+    where advance' (Just (Occupied kind _)) = (afterAttacking, Just enemyFound)
+             where afterAttacking = attack (enemy kind) destination afterMoving
+                   afterMoving = move spot destination cv
+                   destination = path cv spot (inRange enemySpots spot cv)
+                   enemyFound = length enemySpots > 0
+                   enemySpots = Map.keys $ units (enemy kind) cv
+          advance' _ = (cv, Nothing) -- no changes
 
 -- | The Set of Spot from where we can attack the given Kind of enemy.
 --
--- The given spot is the current position, which can be one of interest without
--- being a Cavern.
-spotsOfInterest :: Kind -> Spot -> Cave -> Set Spot
-spotsOfInterest kind here cv = Set.fromList inRange
-    where inRange = filter isHereOrCavern interstingSpots
+-- The given spot is the current position, which can be considered "in range"
+-- without being a Cavern.
+inRange :: [Spot] -> Spot -> Cave -> Set Spot
+inRange enemySpots here cv = Set.fromList reachable
+    where reachable = filter isHereOrCavern interstingSpots
           isHereOrCavern spot = isHere spot || isCavern spot
           isHere spot = spot == here
           isCavern spot = Map.lookup spot cv == Just Cavern
           interstingSpots = concatMap neighbours enemySpots
-          enemySpots = Map.keys $ units kind cv
 
 -- | The neighbours Spot from start to step into in order to reach a Spot of
 -- interest.
@@ -194,9 +202,10 @@ path :: Cave -> Spot -> Set Spot -> Spot
 path cv start soi
   | Set.null soi = start -- no point of interest
   | start `Set.member` soi = start -- we're already sitting at one
-  | otherwise = case freeNeighbours cv start of
-                  [] -> start -- can't move
-                  xs -> bfs (Set.fromList $ start : xs) [(x, x) | x <- xs] [] []
+  | otherwise =
+      case freeNeighbours cv start of
+        [] -> start -- can't move
+        xs -> bfs (Set.fromList $ start : xs) [(x, x) | x <- xs] [] []
   -- Breadth-first search for the perfect Spot.
   --
   -- Path are stored with only the neighbours starting point and landing point
