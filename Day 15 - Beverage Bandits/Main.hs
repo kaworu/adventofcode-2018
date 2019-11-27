@@ -184,9 +184,9 @@ advance cv spot = advance' $ Map.lookup spot cv
                    enemySpots = Map.keys $ units (enemy kind) cv
           advance' _ = (cv, Nothing) -- no changes
 
--- | The Set of Spot from where we can attack the given Kind of enemy.
+-- | The Set of Spot from where we can attack any Spots from the given list.
 --
--- The given spot is the current position, which can be considered "in range"
+-- The given Spot is the current position, which can be considered "in range"
 -- without being a Cavern.
 inRange :: [Spot] -> Spot -> Cave -> Set Spot
 inRange enemySpots here cv = Set.fromList reachable
@@ -198,6 +198,10 @@ inRange enemySpots here cv = Set.fromList reachable
 
 -- | The neighbours Spot from start to step into in order to reach a Spot of
 -- interest.
+--
+-- We limit the expression result to the first step of the path, for
+-- simplicity's sake and also because it is the only one we need to make a
+-- move decision.
 path :: Cave -> Spot -> Set Spot -> Spot
 path cv start soi
   | Set.null soi = start -- no point of interest
@@ -229,7 +233,7 @@ path cv start soi
 
 -- | The Cave once someone move from an occupied to a cavern.
 --
--- NOTE: Simply swap the two Location in the Cave without checking wether the
+-- NOTE: Simply swap the two Location in the Cave without checking whether the
 -- starting Spot is Occupied nor the landing Spot is a Cavern.
 move :: Spot -> Spot -> Cave -> Cave
 move from to cv
