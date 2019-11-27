@@ -52,6 +52,16 @@ data Location = Wall | Cavern | Occupied Kind Hp
 -- | The whole scanned map.
 type Cave = Map Spot Location
 
+-- | Represent a unit moving from a Spot to another.
+data MoveEvent = Step Spot Spot
+
+-- | Represent a unit attacking a Victim of a Kind resulting in a total Hp
+-- (that can be zero or negative if the victim died).
+data AttackEvent = Victim Kind Hp
+
+-- | Represent actions taken by a unit on its turn.
+data TurnEvent = NoEnemyFound | Turn (Maybe MoveEvent) (Maybe AttackEvent)
+
 -- | Display Goblins and Elves as described in the README.
 instance Show Kind where
     show Goblin = "G"
@@ -139,46 +149,39 @@ freeNeighbours cv = filter free . neighbours
 units :: Kind -> Cave -> Cave
 units kind = Map.filter (isOccupiedBy kind)
 
--- | the Cave ticked until the stop condition is met or the fight is over,
--- along with the count of full round taken.
-combat :: (Cave -> Bool) -> Cave -> (Cave, Int)
-combat cond = combat' 0
-    where combat' i cv
-            | cond cv   = (cv,  i)
-            | not full  = (cv', i) -- incomplete round
-            | otherwise = combat' (i + 1) cv'
-            where (cv', full) = tick cv
-
--- | the Cave after a combat without mercy, along with the count of full round
--- taken.
-combatUntilOneSideWin :: Cave -> (Cave, Int)
-combatUntilOneSideWin = combat (const False)
-
 -- | The Set of Kind left in the Cave.
 kindLeft :: Cave -> Set Kind
 kindLeft = Set.fromList . mapMaybe occupiedBy . Map.elems
     where occupiedBy (Occupied kind _) = Just kind
           occupiedBy _ = Nothing
 
--- | The Cave after one round, i.e. once every unit has moved and attacked
--- (in reading order) along with True if this was a full round, False
--- otherwise.
-tick :: Cave -> (Cave, Bool)
-tick initial = tick1 True initial everybody
-    where everybody = Map.keys $ Map.filter isOccupied initial
-          tick1 first cv []       = (cv, not first)
-          tick1 _     cv (x : xs) = next $ advance cv x
-              where next (_, Just False) = (cv, False)
-                    next (advanced, _)   = tick1 False advanced xs
+-- | The round number and Cave state at the end of the fight.
+fightUntilOneSideWin :: Cave -> (Int, Cave)
+fightUntilOneSideWin cv = (i, cv')
+    where (i, cv', _) = head $ filter noEnemyFound (fight cv)
+          noEnemyFound (_, _, NoEnemyFound) = True
+          noEnemyFound _  = False
+
+-- | Infinite list of the round number, Cave state and TurnEvent resulting from
+-- the fight.
+fight :: Cave -> [(Int, Cave, TurnEvent)]
+fight initial = turn 0 initial (everybody initial)
+    where everybody = Map.keys . Map.filter isOccupied
+          turn i cv [] = turn (i + 1) cv (everybody cv)
+          turn i cv (x : xs) = next $ advance cv x
+              where next (cv', Just e)  = (i, cv', e) : turn i cv' xs
+                    next (cv', Nothing) = turn i cv' xs
 
 -- | The Cave after the unit at the given Spot has taken one round of action,
--- along with Just True if at least one enemy was spotted, Just False if no
--- enemy was spotted, Nothing if there is no unit at the given Spot.
-advance :: Cave -> Spot -> (Cave, Maybe Bool)
+-- along with Just TurnEvent if the unit at the given Spot has not already
+-- died, Nothing otherwise.
+advance :: Cave -> Spot -> (Cave, Maybe TurnEvent)
 advance cv spot = advance' $ Map.lookup spot cv
-    where advance' (Just (Occupied kind _)) = (afterAttacking, Just enemyFound)
-             where afterAttacking = attack (enemy kind) destination afterMoving
-                   afterMoving = move spot destination cv
+    where advance' (Just (Occupied kind _))
+            | not enemyFound = (cv, Just $ NoEnemyFound)
+            | otherwise      = (attacked, Just $ Turn mev aev)
+             where (attacked, aev) = attack (enemy kind) destination moved
+                   (moved, mev) = move spot destination cv
                    destination = path cv spot (inRange enemySpots spot cv)
                    enemyFound = not $ null enemySpots
                    enemySpots = Map.keys $ units (enemy kind) cv
@@ -231,33 +234,36 @@ path cv start soi
                             next' = next ++ [(s, x) | x <- steps] in
                             bfs visited' ss next' found
 
--- | The Cave once someone move from an occupied to a cavern.
+-- | The Cave once someone move from an occupied spot to a cavern, along with
+-- the move event if any was evaluated.
 --
--- NOTE: Simply swap the two Location in the Cave without checking whether the
+-- XXX: Simply swap the two Location in the Cave without checking whether the
 -- starting Spot is Occupied nor the landing Spot is a Cavern.
-move :: Spot -> Spot -> Cave -> Cave
+move :: Spot -> Spot -> Cave -> (Cave, Maybe MoveEvent)
 move from to cv
-  | from == to = cv
-  | otherwise  = swap from to cv
+  | from == to = (cv, Nothing)
+  | otherwise  = (swap from to cv, Just event)
+  where event = Step from to
 
 -- | The Cave once the weakest nearby enemy of the given Kind has been attacked
--- from the given Spot.
-attack :: Kind -> Spot -> Cave -> Cave
-attack kind from cv =
-    case weakest targets of
-      Nothing -> cv
-      Just (spot, hp) -> Map.insert spot (injuredOrDead hp) cv
+-- from the given Spot, along with the attack event if any was evaluated.
+attack :: Kind -> Spot -> Cave -> (Cave, Maybe AttackEvent)
+attack kind from cv = attack' $ weakest targets
     where weakest [] = Nothing
           weakest xs = Just $ minimumBy (compare `on` snd) xs
           targets = mapMaybe (attackable . locate) (neighbours from)
-          locate spot = (spot, Map.lookup spot cv)
           attackable (spot, Just (Occupied k hp))
             | k == kind = Just (spot, hp)
             | otherwise = Nothing
           attackable _ = Nothing
-          injuredOrDead hp
-            | hp <= attackPower = Cavern -- died
-            | otherwise = Occupied kind (hp - attackPower) -- injured
+          locate spot = (spot, Map.lookup spot cv)
+          attack' Nothing = (cv, Nothing)
+          attack' (Just (spot, hp)) = (cv', Just event)
+              where cv' = Map.insert spot injuredOrDead cv
+                    injuredOrDead
+                      | hp <= attackPower = Cavern -- died
+                      | otherwise = Occupied kind (hp - attackPower) -- injured
+                    event = Victim kind (hp - attackPower)
 
 -- | Display the count of rounds, winner kind with total hp left, and outcome.
 answer :: Int -> Cave -> IO ()
@@ -280,7 +286,7 @@ main = do
     input <- getContents
     case parse cave "" input of
       Left err -> fail (show err)
-      Right cv -> let (done, i) = combatUntilOneSideWin cv in
+      Right cv -> let (i, done) = fightUntilOneSideWin cv in
                       answer i done
 
 -- | Parse a location
