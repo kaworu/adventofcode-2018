@@ -231,7 +231,7 @@ path cv start soi
   -- ++ing a lot).
   where bfs _       [] []   []    = start -- nowhere to go
         bfs visited [] next []    = bfs visited next [] []
-        bfs _       [] _    found = fst $ head found
+        bfs _       [] _    found = fst $ minimumBy (compare `on` snd) found
         bfs visited ((s, s') : ss) next found
           | s' `Set.member` soi = bfs visited ss next (found ++ [(s, s')])
           | otherwise = let around = freeNeighbours cv s'
