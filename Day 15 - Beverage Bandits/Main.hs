@@ -28,6 +28,12 @@ swap x y m = case (Map.lookup x m, Map.lookup y m) of
                (Just x', Just y') -> Map.insert y x' $ Map.insert x y' m
                _                  -> m
 
+-- | Extract the snd of a triple
+--
+-- See Data.Tuple from extra.
+snd3 :: (a, b, c) -> b
+snd3 (_, r, _) = r
+
 -- | A (y, x) coordinate in the map.
 --
 -- NOTE: in this puzzle we use (y, x) instead of the more traditional (x, y)
@@ -46,7 +52,7 @@ data Kind = Goblin | Elf
     deriving (Eq, Ord)
 
 -- | An area location.
-data Location = Wall | Cavern | Occupied Kind Hp
+data Location = Wall | Cavern | Occupied Kind Hp Power
     deriving (Eq)
 
 -- | The whole scanned map.
@@ -71,15 +77,15 @@ instance Show Kind where
 instance Show Location where
     show Wall   = "#"
     show Cavern = "."
-    show (Occupied kind _) = show kind
+    show (Occupied kind _ _) = show kind
 
 -- | Initial Hit Points for both Goblins and Elves.
 initialHp :: Hp
 initialHp = 200
 
--- | Attack Power of both Goblins and Elves.
-attackPower :: Power
-attackPower = 3
+-- | Attack Power of both Goblins and Elves units. Elves may become stronger.
+initialPower :: Power
+initialPower = 3
 
 -- | The enemy Kind of the given one.
 enemy :: Kind -> Kind
@@ -102,13 +108,13 @@ neighbours (y, x) = [(y - 1, x), (y, x - 1), (y, x + 1), (y + 1, x)]
 -- False
 -- >>> isOccupied Cavern
 -- False
--- >>> isOccupied (Occupied Elf initialHp)
+-- >>> isOccupied (Occupied Elf initialHp initialPower)
 -- True
--- >>> isOccupied (Occupied Goblin initialHp)
+-- >>> isOccupied (Occupied Goblin initialHp initialPower)
 -- True
 isOccupied :: Location -> Bool
-isOccupied (Occupied _ _) = True
-isOccupied _              = False
+isOccupied (Occupied _ _ _) = True
+isOccupied _                = False
 
 -- | True if the given location occupied by a unit of the given Kind,
 -- False otherwise.
@@ -117,17 +123,17 @@ isOccupied _              = False
 -- False
 -- >>> isOccupiedBy Goblin Cavern
 -- False
--- >>> isOccupiedBy Goblin (Occupied Elf initialHp)
+-- >>> isOccupiedBy Goblin (Occupied Elf initialHp initialPower)
 -- False
--- >>> isOccupiedBy Elf (Occupied Goblin initialHp)
+-- >>> isOccupiedBy Elf (Occupied Goblin initialHp initialPower)
 -- False
--- >>> isOccupiedBy Elf (Occupied Elf initialHp)
+-- >>> isOccupiedBy Elf (Occupied Elf initialHp initialPower)
 -- True
--- >>> isOccupiedBy Goblin (Occupied Goblin initialHp)
+-- >>> isOccupiedBy Goblin (Occupied Goblin initialHp initialPower)
 -- True
 isOccupiedBy :: Kind -> Location -> Bool
-isOccupiedBy k (Occupied k' _) = k' == k
-isOccupiedBy _ _               = False
+isOccupiedBy k (Occupied k' _ _) = k' == k
+isOccupiedBy _ _                 = False
 
 -- | The Cavern neighbours spots from the given one, in reading order.
 --
@@ -152,7 +158,7 @@ units kind = Map.filter (isOccupiedBy kind)
 -- | The Set of Kind left in the Cave.
 kindLeft :: Cave -> Set Kind
 kindLeft = Set.fromList . mapMaybe occupiedBy . Map.elems
-    where occupiedBy (Occupied kind _) = Just kind
+    where occupiedBy (Occupied kind _ _) = Just kind
           occupiedBy _ = Nothing
 
 -- | The round number and Cave state at the end of the fight.
@@ -177,12 +183,12 @@ fight initial = turn 0 initial (everybody initial)
 -- died, Nothing otherwise.
 advance :: Cave -> Spot -> (Cave, Maybe TurnEvent)
 advance cv spot = advance' $ Map.lookup spot cv
-    where advance' (Just (Occupied kind _))
-            | not enemyFound = (cv, Just $ NoEnemyFound)
+    where advance' (Just (Occupied kind _ power))
+            | not enemyFound = (cv, Just NoEnemyFound)
             | otherwise      = (attacked, Just $ Turn mev aev)
-             where (attacked, aev) = attack (enemy kind) destination moved
-                   (moved, mev) = move spot destination cv
-                   destination = path cv spot (inRange enemySpots spot cv)
+             where (attacked, aev) = attack (enemy kind) power dest moved
+                   (moved, mev) = move spot dest cv
+                   dest = path cv spot (inRange enemySpots spot cv)
                    enemyFound = not $ null enemySpots
                    enemySpots = Map.keys $ units (enemy kind) cv
           advance' _ = (cv, Nothing) -- no changes
@@ -247,22 +253,22 @@ move from to cv
 
 -- | The Cave once the weakest nearby enemy of the given Kind has been attacked
 -- from the given Spot, along with the attack event if any was evaluated.
-attack :: Kind -> Spot -> Cave -> (Cave, Maybe AttackEvent)
-attack kind from cv = attack' $ weakest targets
+attack :: Kind -> Power -> Spot -> Cave -> (Cave, Maybe AttackEvent)
+attack kind attackPower from cv = hit $ weakest targets
     where weakest [] = Nothing
-          weakest xs = Just $ minimumBy (compare `on` snd) xs
+          weakest xs = Just $ minimumBy (compare `on` snd3) xs
           targets = mapMaybe (attackable . locate) (neighbours from)
-          attackable (spot, Just (Occupied k hp))
-            | k == kind = Just (spot, hp)
+          attackable (spot, Just (Occupied k hp p))
+            | k == kind = Just (spot, hp, p)
             | otherwise = Nothing
           attackable _ = Nothing
           locate spot = (spot, Map.lookup spot cv)
-          attack' Nothing = (cv, Nothing)
-          attack' (Just (spot, hp)) = (cv', Just event)
+          hit Nothing = (cv, Nothing)
+          hit (Just (spot, hp, p)) = (cv', Just event)
               where cv' = Map.insert spot injuredOrDead cv
                     injuredOrDead
                       | hp <= attackPower = Cavern -- died
-                      | otherwise = Occupied kind (hp - attackPower) -- injured
+                      | otherwise = Occupied kind (hp - attackPower) p
                     event = Victim kind (hp - attackPower)
 
 -- | Display the count of rounds, winner kind with total hp left, and outcome.
@@ -276,7 +282,7 @@ answer i cv = do
           k2s Goblin = "Goblins"
           k2s Elf    = "Elves"
           totalHp = sum $ mapMaybe hp $ Map.elems cv
-              where hp (Occupied _ hpLeft) = Just hpLeft
+              where hp (Occupied _ hpLeft _) = Just hpLeft
                     hp _ = Nothing
 
 -- | Compute and display the count of rounds, winner kind with total hp left,
@@ -308,8 +314,8 @@ location = do
     return $ f c
         where f '#' = Wall
               f '.' = Cavern
-              f 'G' = Occupied Goblin initialHp
-              f 'E' = Occupied Elf    initialHp
+              f 'G' = Occupied Goblin initialHp initialPower
+              f 'E' = Occupied Elf    initialHp initialPower
               f x   = error (x : ": invalid location")
 
 -- | Parse the whole map as a list of Spot and Location.
@@ -370,6 +376,6 @@ xdisplay f (y, x) xmax cv
 
 -- | Show the Cave Goblins and Elves.
 udisplay :: Cave -> String
-udisplay = intercalate ", " . mapMaybe kindAndHp . Map.elems
-    where kindAndHp (Occupied kind hp) = Just $ printf "%s(%d)" (show kind) hp
-          kindAndHp _ = Nothing
+udisplay = intercalate ", " . mapMaybe showHp . Map.elems
+    where showHp (Occupied kind hp _) = Just $ printf "%s(%d)" (show kind) hp
+          showHp _ = Nothing
