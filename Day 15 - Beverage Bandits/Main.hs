@@ -44,6 +44,9 @@ type Spot = (Int, Int)
 -- | Hit Points.
 type Hp = Int
 
+-- | Round number.
+type Round = Int
+
 -- | Attack Hit Points.
 type Power = Hp
 
@@ -61,9 +64,9 @@ type Cave = Map Spot Location
 -- | Represent a unit moving from a Spot to another.
 data MoveEvent = Step Spot Spot
 
--- | Represent a unit attacking a Victim of a Kind resulting in a total Hp
--- (that can be zero or negative if the victim died).
-data AttackEvent = Victim Kind Hp
+-- | Represent a unit attacking a Victim of a Kind. If the Victim is still
+-- alive, its resulting total Hp is provided (Wounded case).
+data AttackEvent = Killed Kind | Wounded Kind Hp
 
 -- | Represent actions taken by a unit on its turn.
 data TurnEvent = NoEnemyFound | Turn (Maybe MoveEvent) (Maybe AttackEvent)
@@ -155,22 +158,56 @@ freeNeighbours cv = filter free . neighbours
 units :: Kind -> Cave -> Cave
 units kind = Map.filter (isOccupiedBy kind)
 
+-- | the given Cave when all the Elves have the provided Power.
+enpowerElves :: Cave -> Power -> Cave
+enpowerElves cv p = Map.map f cv
+    where f (Occupied Elf hp _) = Occupied Elf hp p
+          f other = other
+
 -- | The Set of Kind left in the Cave.
 kindLeft :: Cave -> Set Kind
 kindLeft = Set.fromList . mapMaybe occupiedBy . Map.elems
     where occupiedBy (Occupied kind _ _) = Just kind
           occupiedBy _ = Nothing
 
--- | The round number and Cave state at the end of the fight.
-fightUntilOneSideWin :: Cave -> (Int, Cave)
-fightUntilOneSideWin cv = (i, cv')
-    where (i, cv', _) = head $ filter noEnemyFound (fight cv)
-          noEnemyFound (_, _, NoEnemyFound) = True
+-- | The round number and Cave state, and last TurnEvent at the end of the
+-- fight.
+fightUntilOneSideWin :: Cave -> (Round, Cave, TurnEvent)
+fightUntilOneSideWin cv = head $ filter noEnemyFound (fight cv)
+    where noEnemyFound (_, _, NoEnemyFound) = True
           noEnemyFound _  = False
+
+-- | The round number and Cave state, and last TurnEvent at the end of the
+-- fight.
+fightWithoutAnyElfDying :: Cave -> (Round, Cave, TurnEvent)
+fightWithoutAnyElfDying cv = head $ filter noEnemyFoundOrAnElfDied (fight cv)
+    where noEnemyFoundOrAnElfDied (_, _, NoEnemyFound) = True
+          noEnemyFoundOrAnElfDied (_, _, Turn _ (Just (Killed Elf))) = True
+          noEnemyFoundOrAnElfDied _ = False
+
+-- | An upper-bound of a Power for the Elves allowing them to win without
+-- losses.
+ceilingPower :: Power -> Cave -> Power
+ceilingPower p cv = case fightWithoutAnyElfDying (enpowerElves cv p) of
+                 (_, _, NoEnemyFound) -> p
+                 _ -> ceilingPower (2 * p) cv
+
+-- | The minimum Power for the Elves (given a lower and upper bound) allowing
+-- them to win without any losses.
+bsearch :: Cave -> (Power, Power) -> (Power, Round, Cave)
+bsearch cv (bad, good)
+  | good - bad == 1 = done good $ fightUntilOneSideWin (enpowerElves cv good)
+  | otherwise = case fightWithoutAnyElfDying (enpowerElves cv mid) of
+                  (_, _, NoEnemyFound) -> bsearch cv (bad, mid)
+                  _                    -> bsearch cv (mid, good)
+  where mid = bad + (good - bad) `div` 2
+        done p (i, cv', _) = (p, i, cv')
 
 -- | Infinite list of the round number, Cave state and TurnEvent resulting from
 -- the fight.
-fight :: Cave -> [(Int, Cave, TurnEvent)]
+--
+-- FIXME: Will loop indefinitely if the given Cave have no unit.
+fight :: Cave -> [(Round, Cave, TurnEvent)]
 fight initial = turn 0 initial (everybody initial)
     where everybody = Map.keys . Map.filter isOccupied
           turn i cv [] = turn (i + 1) cv (everybody cv)
@@ -269,15 +306,19 @@ attack kind attackPower from cv = hit $ weakest targets
                     injuredOrDead
                       | hp <= attackPower = Cavern -- died
                       | otherwise = Occupied kind (hp - attackPower) p
-                    event = Victim kind (hp - attackPower)
+                    event
+                      | hp <= attackPower = Killed kind
+                      | otherwise = Wounded kind (hp - attackPower)
 
--- | Display the count of rounds, winner kind with total hp left, and outcome.
-answer :: Int -> Cave -> IO ()
-answer i cv = do
+-- | Display the count of rounds, winner kind with total hp left, outcome, and
+-- Elf power.
+answer :: Round -> Cave -> Power -> IO ()
+answer i cv ep = do
     printf "%s\n\n" (display cv)
     printf "Combat ends after %d full rounds\n" i
     printf "%s win with %d total hit points left\n" (k2s winningKind) totalHp
     printf "Outcome: %d * %d = %d\n" i totalHp (i * totalHp)
+    printf "Elf power was: %d\n" ep
     where winningKind = head $ Set.elems (kindLeft cv)
           k2s Goblin = "Goblins"
           k2s Elf    = "Elves"
@@ -292,8 +333,13 @@ main = do
     input <- getContents
     case parse cave "" input of
       Left err -> fail (show err)
-      Right cv -> let (i, done) = fightUntilOneSideWin cv in
-                      answer i done
+      Right cv -> let (i, over, _) = fightUntilOneSideWin cv
+                      c = ceilingPower (2 * initialPower) cv
+                      (ep, i', over') = bsearch cv (c `div` 2, c) in
+                      do answer i over initialPower
+                         printf "\n"
+                         answer i' over' ep
+
 
 -- | Parse a location
 --
