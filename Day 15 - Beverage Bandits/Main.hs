@@ -180,7 +180,7 @@ advance cv spot = advance' $ Map.lookup spot cv
              where afterAttacking = attack (enemy kind) destination afterMoving
                    afterMoving = move spot destination cv
                    destination = path cv spot (inRange enemySpots spot cv)
-                   enemyFound = length enemySpots > 0
+                   enemyFound = not $ null enemySpots
                    enemySpots = Map.keys $ units (enemy kind) cv
           advance' _ = (cv, Nothing) -- no changes
 
